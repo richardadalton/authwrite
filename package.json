@@ -1,0 +1,34 @@
+{
+  "name": "authwrite",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Zero-dependency authorization library with idiomatic framework adapters and pluggable observers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/core && npm run build -w packages/express && npm run build -w packages/fastify && npm run build -w packages/nextjs && npm run build -w packages/hono && npm run build -w packages/observer-pg && npm run build -w packages/observer-redis && npm run build -w packages/observer-otel && npm run build -w packages/loader-db && npm run build -w packages/loader-yaml && npm run build -w packages/testing",
+    "clean": "npm run clean -ws --if-present && rm -rf packages/*/dist packages/*/*.tsbuildinfo",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublish:check": "npm run clean && npm run build && npm test",
+    "release": "npm run prepublish:check && changeset publish",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish:dry": "npm run prepublish:check && npm publish --dry-run -w packages/core && npm publish --dry-run -w packages/express && npm publish --dry-run -w packages/fastify && npm publish --dry-run -w packages/nextjs && npm publish --dry-run -w packages/hono && npm publish --dry-run -w packages/observer-pg && npm publish --dry-run -w packages/observer-redis && npm publish --dry-run -w packages/observer-otel && npm publish --dry-run -w packages/loader-db && npm publish --dry-run -w packages/loader-yaml && npm publish --dry-run -w packages/testing",
+    "publish:all": "npm run prepublish:check && npm publish -w packages/core && npm publish -w packages/express && npm publish -w packages/fastify && npm publish -w packages/nextjs && npm publish -w packages/hono && npm publish -w packages/observer-pg && npm publish -w packages/observer-redis && npm publish -w packages/observer-otel && npm publish -w packages/loader-db && npm publish -w packages/loader-yaml && npm publish -w packages/testing"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.0",
+    "@types/node": "^22.13.14",
+    "fast-check": "^4.6.0",
+    "tsx": "^4.19.3",
+    "typescript": "5.4.5",
+    "vitest": "^3.0.8"
+  }
+}

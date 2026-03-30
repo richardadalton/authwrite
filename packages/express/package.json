@@ -1,0 +1,41 @@
+{
+  "name": "@authwrite/express",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Express middleware adapter for AuthEngine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git",
+    "directory": "packages/express"
+  },
+  "keywords": ["authorization", "authz", "express", "middleware"],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "test -d dist && echo 'dist already built, skipping' || (npm run clean && npm run build)"
+  },
+  "dependencies": {
+    "@authwrite/core": "*"
+  },
+  "peerDependencies": {
+    "express": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "express": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

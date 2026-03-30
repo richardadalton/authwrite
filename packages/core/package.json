@@ -1,0 +1,44 @@
+{
+  "name": "@authwrite/core",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Zero-dependency authorization engine. PolicyDefinition, AuthEngine, and Decision types.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "authorization",
+    "authz",
+    "rbac",
+    "abac",
+    "policy",
+    "headless",
+    "zero-dependency"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "test -d dist && echo 'dist already built, skipping' || (npm run clean && npm run build)"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

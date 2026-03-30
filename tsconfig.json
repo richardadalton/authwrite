@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.base.json",
+  "files": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/express" },
+    { "path": "./packages/fastify" },
+    { "path": "./packages/nextjs" },
+    { "path": "./packages/hono" },
+    { "path": "./packages/observer-pg" },
+    { "path": "./packages/observer-redis" },
+    { "path": "./packages/observer-otel" },
+    { "path": "./packages/loader-db" },
+    { "path": "./packages/loader-yaml" },
+    { "path": "./packages/testing" }
+  ]
+}

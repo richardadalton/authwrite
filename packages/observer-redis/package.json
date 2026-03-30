@@ -1,0 +1,40 @@
+{
+  "name": "@authwrite/observer-redis",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Redis decision cache observer with TTL and invalidation for AuthEngine.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git",
+    "directory": "packages/observer-redis"
+  },
+  "keywords": ["authorization", "authz", "observer", "cache", "redis"],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "test -d dist && echo 'dist already built, skipping' || (npm run clean && npm run build)"
+  },
+  "dependencies": {
+    "@authwrite/core": "*"
+  },
+  "peerDependencies": {
+    "ioredis": ">=5.0.0"
+  },
+  "devDependencies": {
+    "ioredis": "^5.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

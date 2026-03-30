@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.1.3/schema.json",
+  "changelog": "@changesets/cli/changelog",
+  "commit": false,
+  "fixed": [
+    [
+      "@authwrite/core",
+      "@authwrite/express",
+      "@authwrite/fastify",
+      "@authwrite/nextjs",
+      "@authwrite/hono",
+      "@authwrite/observer-pg",
+      "@authwrite/observer-redis",
+      "@authwrite/observer-otel",
+      "@authwrite/loader-db",
+      "@authwrite/loader-yaml",
+      "@authwrite/testing"
+    ]
+  ],
+  "linked": [],
+  "access": "public",
+  "baseBranch": "main",
+  "updateInternalDependencies": "patch",
+  "ignore": []
+}
