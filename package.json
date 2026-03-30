@@ -9,7 +9,8 @@
     "url": "git+https://github.com/richardadalton/authwrite.git"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "scripts": {
     "build": "npm run build -w packages/core && npm run build -w packages/express && npm run build -w packages/fastify && npm run build -w packages/nextjs && npm run build -w packages/hono && npm run build -w packages/observer-pg && npm run build -w packages/observer-redis && npm run build -w packages/observer-otel && npm run build -w packages/loader-db && npm run build -w packages/loader-yaml && npm run build -w packages/testing",
