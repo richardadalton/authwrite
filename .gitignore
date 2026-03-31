@@ -31,6 +31,9 @@ npm-debug.log*
 # Coverage
 coverage/
 
+# Authwrite devtools runtime output
+.authwrite-flags.json
+
 # Local scratch / feedback
 .working-notes/
 .tmp/
