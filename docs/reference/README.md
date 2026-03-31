@@ -15,5 +15,6 @@ Complete API reference for every published `@authwrite` package. These documents
 | `@authwrite/testing` | [testing-api.md](testing-api.md) | `decisionRecorder`, `DecisionRecorder` methods, `coverageReport`, and `CoverageReport`. |
 | `@authwrite/loader-yaml` | [loader-yaml-api.md](loader-yaml-api.md) | `createFileLoader`, `FileLoaderConfig`, `RuleRegistry`, `RuleFn`, the YAML/JSON schema, and `watch` behaviour. |
 | `@authwrite/observer-otel` | [observer-otel-api.md](observer-otel-api.md) | `createOtelObserver`, `OtelObserverConfig`, span attributes, metric instruments, and peer dependency requirements. |
+| `@authwrite/devtools` | [devtools-api.md](devtools-api.md) | `createDevTools`, `DevToolsObserver`, `createDevServer`, `PolicySwitcherOptions`, decision flagging, `PersistedDecision`, `DecisionFlag`, and dev server endpoints. |
 
 © 2026 Devjoy Ltd. MIT License.
