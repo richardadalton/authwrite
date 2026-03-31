@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAuthEngine, fromLoader, evaluatePolicy, intersect, union, firstMatch } from '@authwrite/core'
-import { decisionRecorder } from '@authwrite/testing'
+import { createAuthEngine, fromLoader, evaluatePolicy, intersect, union, firstMatch } from '@daltonr/authwrite-core'
+import { decisionRecorder } from '@daltonr/authwrite-testing'
 import type {
   AuthContext,
   PolicyDefinition,
@@ -8,7 +8,7 @@ import type {
   Resource,
   AuthObserver,
   DecisionEvent,
-} from '@authwrite/core'
+} from '@daltonr/authwrite-core'
 
 // ─── Test domain types ────────────────────────────────────────────────────────
 

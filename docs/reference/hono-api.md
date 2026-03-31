@@ -1,6 +1,6 @@
 # Hono API Reference
 
-This reference covers `@authwrite/hono` — the Hono middleware adapter for `@authwrite/core`.
+This reference covers `@daltonr/authwrite-hono` — the Hono middleware adapter for `@daltonr/authwrite-core`.
 
 ---
 
@@ -48,8 +48,8 @@ app.get('/documents/:id', authMiddleware, async (c) => {
 To get full TypeScript support for `c.get(AUTH_DECISION_KEY)`, declare the key in your `Env` type's `Variables`:
 
 ```typescript
-import type { Decision } from '@authwrite/core'
-import { AUTH_DECISION_KEY } from '@authwrite/hono'
+import type { Decision } from '@daltonr/authwrite-core'
+import { AUTH_DECISION_KEY } from '@daltonr/authwrite-hono'
 
 type Env = {
   Variables: {
@@ -100,7 +100,7 @@ HTTP status code is always `403`.
 
 ## Edge runtime compatibility
 
-`@authwrite/hono` has no Node.js-specific dependencies. It works in any runtime that Hono supports, including Cloudflare Workers, Deno Deploy, Bun, and Node.js.
+`@daltonr/authwrite-hono` has no Node.js-specific dependencies. It works in any runtime that Hono supports, including Cloudflare Workers, Deno Deploy, Bun, and Node.js.
 
 ---
 
@@ -108,9 +108,9 @@ HTTP status code is always `403`.
 
 ```typescript
 import { Hono } from 'hono'
-import { createAuthEngine } from '@authwrite/core'
-import { createAuthMiddleware, AUTH_DECISION_KEY } from '@authwrite/hono'
-import type { Decision } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { createAuthMiddleware, AUTH_DECISION_KEY } from '@daltonr/authwrite-hono'
+import type { Decision } from '@daltonr/authwrite-core'
 
 type Env = {
   Variables: { [AUTH_DECISION_KEY]: Decision }

@@ -1,8 +1,8 @@
 import { describe, it } from 'vitest'
 import * as fc from 'fast-check'
-import { createAuthEngine } from '@authwrite/core'
-import { decisionRecorder } from '@authwrite/testing'
-import type { PolicyDefinition, PolicyRule, FieldRule, Subject, Resource, AuthContext } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { decisionRecorder } from '@daltonr/authwrite-testing'
+import type { PolicyDefinition, PolicyRule, FieldRule, Subject, Resource, AuthContext } from '@daltonr/authwrite-core'
 
 // ─── Arbitraries ──────────────────────────────────────────────────────────────
 

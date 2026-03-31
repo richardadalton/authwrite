@@ -4,17 +4,17 @@
   "commit": false,
   "fixed": [
     [
-      "@authwrite/core",
-      "@authwrite/express",
-      "@authwrite/fastify",
-      "@authwrite/nextjs",
-      "@authwrite/hono",
-      "@authwrite/observer-pg",
-      "@authwrite/observer-redis",
-      "@authwrite/observer-otel",
-      "@authwrite/loader-db",
-      "@authwrite/loader-yaml",
-      "@authwrite/testing"
+      "@daltonr/authwrite-core",
+      "@daltonr/authwrite-express",
+      "@daltonr/authwrite-fastify",
+      "@daltonr/authwrite-nextjs",
+      "@daltonr/authwrite-hono",
+      "@daltonr/authwrite-observer-pg",
+      "@daltonr/authwrite-observer-redis",
+      "@daltonr/authwrite-observer-otel",
+      "@daltonr/authwrite-loader-db",
+      "@daltonr/authwrite-loader-yaml",
+      "@daltonr/authwrite-testing"
     ]
   ],
   "linked": [],

@@ -1,5 +1,5 @@
 import type { RequestHandler, Request, Response } from 'express'
-import type { AuthEvaluator, Decision, Subject, Resource } from '@authwrite/core'
+import type { AuthEvaluator, Decision, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Request augmentation ─────────────────────────────────────────────────────
 

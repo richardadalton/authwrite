@@ -10,7 +10,7 @@ The problem it solves is the one that appears in almost every application past a
 
 ## Zero dependencies — what that means in practice
 
-`@authwrite/core` ships no runtime dependencies. No lodash, no reflect-metadata, no class-transformer. This has three practical consequences:
+`@daltonr/authwrite-core` ships no runtime dependencies. No lodash, no reflect-metadata, no class-transformer. This has three practical consequences:
 
 - It installs instantly and adds nothing to your bundle beyond its own ~4 kB.
 - It runs anywhere JavaScript runs: Node, Deno, Bun, and modern browsers.

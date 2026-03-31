@@ -88,7 +88,7 @@ export function createDevServer(options: DevServerOptions): DevServer {
         res.end(patched)
       } catch {
         res.writeHead(404)
-        res.end('Client bundle not found — run npm run build in @authwrite/devtools')
+        res.end('Client bundle not found — run npm run build in @daltonr/authwrite-devtools')
       }
       return
     }

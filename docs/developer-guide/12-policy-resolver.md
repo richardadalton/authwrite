@@ -82,8 +82,8 @@ engine.getPolicy()  // → documentPolicy (cached after first evaluation)
 `fromLoader` converts a `PolicyLoader` into a `PolicyResolverFn`. It loads the policy eagerly, caches it, and wires up the loader's `watch` callback to update the cache on hot-reload. The returned resolver function is synchronous after initialisation.
 
 ```typescript
-import { createAuthEngine, fromLoader } from '@authwrite/core'
-import { createFileLoader } from '@authwrite/loader-yaml'
+import { createAuthEngine, fromLoader } from '@daltonr/authwrite-core'
+import { createFileLoader } from '@daltonr/authwrite-loader-yaml'
 
 const loader = createFileLoader<User, Doc>({ path: './policy.yaml', rules })
 
@@ -115,7 +115,7 @@ Three helpers combine multiple resolvers into a single `CompositeResolver`. The 
 `intersect` evaluates every resolver and allows only when all of them allow. The first denial wins; its `reason` appears on the composite decision.
 
 ```typescript
-import { createAuthEngine, intersect } from '@authwrite/core'
+import { createAuthEngine, intersect } from '@daltonr/authwrite-core'
 
 // Subject must satisfy both the base policy and the tenant-specific policy
 const engine = createAuthEngine({
@@ -173,7 +173,7 @@ This makes it straightforward to identify which policies were active when auditi
 `evaluatePolicy` evaluates a `PolicyDefinition` against a context and returns a `Decision` without creating an engine, firing observers, or applying any mode override. Use it to unit-test individual rules or to dry-run a policy before installing it.
 
 ```typescript
-import { evaluatePolicy } from '@authwrite/core'
+import { evaluatePolicy } from '@daltonr/authwrite-core'
 
 // Test a single rule without an engine
 const decision = evaluatePolicy(myPolicy, {

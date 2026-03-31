@@ -1,6 +1,6 @@
 # Chapter 11: HATEOAS
 
-HATEOAS — Hypermedia as the Engine of Application State — is a REST constraint where API responses include links to the actions the client can take next. Instead of the client hardcoding what operations are available, the server embeds only the links the current subject is permitted to follow. The `@authwrite/hateoas` package builds on `evaluateAll` to produce permission-aware link maps from policy decisions.
+HATEOAS — Hypermedia as the Engine of Application State — is a REST constraint where API responses include links to the actions the client can take next. Instead of the client hardcoding what operations are available, the server embeds only the links the current subject is permitted to follow. The `@daltonr/authwrite-hateoas` package builds on `evaluateAll` to produce permission-aware link maps from policy decisions.
 
 ---
 
@@ -31,7 +31,7 @@ The client can inspect `_links` to decide which UI controls to render. No separa
 `buildLinks` evaluates every action in the `actions` map and returns only those the subject is permitted to perform.
 
 ```typescript
-import { buildLinks } from '@authwrite/hateoas'
+import { buildLinks } from '@daltonr/authwrite-hateoas'
 
 const links = await buildLinks({
   engine,
@@ -57,7 +57,7 @@ const links = await buildLinks({
 `embedLinks` does the same work as `buildLinks` and additionally merges the result into your data object as a `_links` property, following [HAL](https://stateless.co/hal_spec.html) conventions.
 
 ```typescript
-import { embedLinks } from '@authwrite/hateoas'
+import { embedLinks } from '@daltonr/authwrite-hateoas'
 
 const body = await embedLinks(document, {
   engine,
@@ -86,7 +86,7 @@ A few things to notice:
 `linksFromDecisions` is a synchronous variant for cases where you have already called `evaluateAll()` and want to build links without a second async round-trip. This is useful when you are computing links alongside other per-resource work.
 
 ```typescript
-import { linksFromDecisions } from '@authwrite/hateoas'
+import { linksFromDecisions } from '@daltonr/authwrite-hateoas'
 
 // You may already have decisions from an earlier evaluateAll call
 const decisions = await engine.evaluateAll({
@@ -133,7 +133,7 @@ Because `buildLinks` and `embedLinks` delegate to whatever `AuthEvaluator` they 
 - **`lockdown` mode**: engine bypassed entirely — no action links returned, no observers fired. Useful during incidents.
 
 ```typescript
-import { createEnforcer } from '@authwrite/core'
+import { createEnforcer } from '@daltonr/authwrite-core'
 
 const enforcer = createEnforcer(engine, { mode: 'audit' })
 
@@ -147,9 +147,9 @@ const links = await buildLinks({ engine: enforcer, subject, resource, actions })
 
 ```typescript
 import express from 'express'
-import { createAuthEngine } from '@authwrite/core'
-import { createAuthMiddleware } from '@authwrite/express'
-import { embedLinks } from '@authwrite/hateoas'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { createAuthMiddleware } from '@daltonr/authwrite-express'
+import { embedLinks } from '@daltonr/authwrite-hateoas'
 
 const engine = createAuthEngine({ policy: documentPolicy })
 

@@ -1,6 +1,6 @@
 # HATEOAS API Reference
 
-This reference covers `@authwrite/hateoas` — permission-aware hypermedia link building for `@authwrite/core`.
+This reference covers `@daltonr/authwrite-hateoas` — permission-aware hypermedia link building for `@daltonr/authwrite-core`.
 
 ---
 
@@ -133,8 +133,8 @@ The `self` link in `embedLinks` is not subject to policy evaluation. It is inclu
 ## Example
 
 ```typescript
-import { buildLinks, embedLinks, linksFromDecisions } from '@authwrite/hateoas'
-import { createAuthEngine } from '@authwrite/core'
+import { buildLinks, embedLinks, linksFromDecisions } from '@daltonr/authwrite-hateoas'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 const engine = createAuthEngine({ policy: documentPolicy })
 

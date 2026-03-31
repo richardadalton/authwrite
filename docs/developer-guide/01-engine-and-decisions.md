@@ -41,8 +41,8 @@ A few things to notice:
 Authwrite has no framework dependencies. You can run it in a test file, a Node script, an edge function, or a Lambda. Here is the minimal example:
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 interface AppSubject extends Subject {
   roles: string[]
@@ -119,7 +119,7 @@ Silent denials are security holes. If your application rejects a request and you
 A minimal logging observer looks like this:
 
 ```typescript
-import type { AuthObserver, DecisionEvent } from '@authwrite/core'
+import type { AuthObserver, DecisionEvent } from '@daltonr/authwrite-core'
 
 const auditLogger: AuthObserver = {
   onDecision(event: DecisionEvent) {

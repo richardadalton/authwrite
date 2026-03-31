@@ -6,7 +6,7 @@ import type {
   PolicyDefinition,
   Subject,
   Resource,
-} from '@authwrite/core'
+} from '@daltonr/authwrite-core'
 
 // ─── DecisionRecorder ────────────────────────────────────────────────────────
 

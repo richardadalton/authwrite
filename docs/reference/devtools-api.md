@@ -1,6 +1,6 @@
 # Devtools API Reference
 
-This reference covers `@authwrite/devtools` — a local development server and browser sidebar for inspecting live authorization decisions.
+This reference covers `@daltonr/authwrite-devtools` — a local development server and browser sidebar for inspecting live authorization decisions.
 
 > **Development only.** Do not load the devtools client script or start the dev server in production.
 
@@ -131,7 +131,7 @@ When `policies` is configured, the sidebar shows a dropdown of `.yaml`, `.yml`, 
 | `onApply` | `(filePath: string) => Promise<void>` | Called when the user applies a policy file from the sidebar. |
 
 ```typescript
-import { createFileLoader, fromLoader } from '@authwrite/loader-yaml'
+import { createFileLoader, fromLoader } from '@daltonr/authwrite-loader-yaml'
 
 const devtools = createDevTools({
   policies: {

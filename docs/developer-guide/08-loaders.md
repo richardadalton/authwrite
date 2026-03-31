@@ -21,7 +21,7 @@ The interface is intentionally minimal. You could implement a loader that fetche
 
 ## The file loader
 
-The `@authwrite/loader-yaml` package provides `createFileLoader`, which reads a policy from a `.yaml`, `.yml`, or `.json` file on disk. It implements both `load()` and `watch()`.
+The `@daltonr/authwrite-loader-yaml` package provides `createFileLoader`, which reads a policy from a `.yaml`, `.yml`, or `.json` file on disk. It implements both `load()` and `watch()`.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -99,8 +99,8 @@ A few things to notice:
 The `RuleRegistry` maps each rule ID from the YAML file to a `RuleFn` object. The `match` function determines whether the rule applies to a given context. The optional `condition` function is an additional predicate that must also pass before the rule fires.
 
 ```typescript
-import { createFileLoader } from '@authwrite/loader-yaml'
-import type { RuleRegistry } from '@authwrite/loader-yaml'
+import { createFileLoader } from '@daltonr/authwrite-loader-yaml'
+import type { RuleRegistry } from '@daltonr/authwrite-loader-yaml'
 
 interface Subject { id: string; role: string }
 interface Resource { id: string; ownerId: string; status: string }
@@ -136,11 +136,11 @@ A few things to notice:
 
 ## Startup pattern with fromLoader
 
-Use `fromLoader` from `@authwrite/core` to convert a `PolicyLoader` into a `PolicyResolver`. `fromLoader` loads the policy eagerly, caches it, and wires the loader's `watch()` callback to update the cache automatically. The engine is then created synchronously.
+Use `fromLoader` from `@daltonr/authwrite-core` to convert a `PolicyLoader` into a `PolicyResolver`. `fromLoader` loads the policy eagerly, caches it, and wires the loader's `watch()` callback to update the cache automatically. The engine is then created synchronously.
 
 ```typescript
-import { createAuthEngine, fromLoader } from '@authwrite/core'
-import { createFileLoader } from '@authwrite/loader-yaml'
+import { createAuthEngine, fromLoader } from '@daltonr/authwrite-core'
+import { createFileLoader } from '@daltonr/authwrite-loader-yaml'
 
 async function bootstrap() {
   const loader = createFileLoader<Subject, Resource>({

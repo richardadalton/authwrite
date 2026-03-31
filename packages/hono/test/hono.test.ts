@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAuthMiddleware, AUTH_DECISION_KEY } from '@authwrite/hono'
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthMiddleware, AUTH_DECISION_KEY } from '@daltonr/authwrite-hono'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 import type { Context, Next } from 'hono'
-import type { PolicyDefinition, Subject, Resource, Decision } from '@authwrite/core'
+import type { PolicyDefinition, Subject, Resource, Decision } from '@daltonr/authwrite-core'
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 

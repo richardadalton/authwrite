@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAuthMiddleware } from '@authwrite/express'
-import { createAuthEngine } from "@authwrite/core"
+import { createAuthMiddleware } from '@daltonr/authwrite-express'
+import { createAuthEngine } from "@daltonr/authwrite-core"
 import type { RequestHandler, Request, Response, NextFunction } from 'express'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Test domain types ────────────────────────────────────────────────────────
 

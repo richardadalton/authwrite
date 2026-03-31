@@ -19,7 +19,7 @@ Authwrite centralises field visibility rules in the same place as action rules. 
 A **FieldRule** has four fields:
 
 ```typescript
-import type { FieldRule } from '@authwrite/core'
+import type { FieldRule } from '@daltonr/authwrite-core'
 
 const rule: FieldRule = {
   id: 'owner-sees-all',
@@ -83,7 +83,7 @@ fieldRules: [
 `evaluateRead()` checks whether the subject can read the resource and, if so, computes the allowed field list in a single call. You do not need to call `evaluate()` for access and then separately compute fields.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 const engine = createAuthEngine({ policy })
 
@@ -114,7 +114,7 @@ If `decision.allowed` is `false`, `allowedFields` will be empty. There is no poi
 Once you have `allowedFields`, use `applyFieldFilter()` to produce a new object containing only the permitted keys:
 
 ```typescript
-import { applyFieldFilter } from '@authwrite/core'
+import { applyFieldFilter } from '@daltonr/authwrite-core'
 
 const document = await db.getDocument('doc-99')
 
@@ -140,8 +140,8 @@ const safeDocument = applyFieldFilter(document, result.allowedFields)
 Here is a complete example with three roles seeing different cuts of the same document:
 
 ```typescript
-import { createAuthEngine, applyFieldFilter } from '@authwrite/core'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import { createAuthEngine, applyFieldFilter } from '@daltonr/authwrite-core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 interface AppSubject extends Subject {
   roles: string[]

@@ -1,4 +1,4 @@
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 

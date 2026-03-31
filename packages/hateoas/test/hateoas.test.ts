@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildLinks, embedLinks, linksFromDecisions } from '@authwrite/hateoas'
-import { createAuthEngine } from '@authwrite/core'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
-import type { LinkTemplate } from '@authwrite/hateoas'
+import { buildLinks, embedLinks, linksFromDecisions } from '@daltonr/authwrite-hateoas'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
+import type { LinkTemplate } from '@daltonr/authwrite-hateoas'
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 

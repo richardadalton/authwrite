@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createOtelObserver } from '@authwrite/observer-otel'
-import { createAuthEngine } from '@authwrite/core'
-import type { Decision, DecisionEvent, AuthContext, Subject, Resource } from '@authwrite/core'
+import { createOtelObserver } from '@daltonr/authwrite-observer-otel'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { Decision, DecisionEvent, AuthContext, Subject, Resource } from '@daltonr/authwrite-core'
 import type { Tracer, Meter, Span } from '@opentelemetry/api'
 import { SpanStatusCode } from '@opentelemetry/api'
 

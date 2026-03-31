@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply, preHandlerHookHandler } from 'fastify'
-import type { Action, AuthEvaluator, Decision, Subject, Resource } from '@authwrite/core'
+import type { Action, AuthEvaluator, Decision, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Request augmentation ─────────────────────────────────────────────────────
 

@@ -9,7 +9,7 @@ export default defineConfig({
   base: '/authwrite/',
   resolve: {
     alias: {
-      '@authwrite/core': fileURLToPath(
+      '@daltonr/authwrite-core': fileURLToPath(
         new URL('../../packages/core/src/index.ts', import.meta.url)
       ),
     },

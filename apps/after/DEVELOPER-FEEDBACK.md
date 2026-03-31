@@ -280,7 +280,7 @@ expect(await engine.can(USERS.bob, DOCS[1], 'archive')).toBe(true)
 This works, but the engine is a full runtime object. I'd prefer a lighter `evaluatePolicy(policy, subject, resource, action)` function that takes the raw policy and inputs — useful for unit
 testing rules in isolation without the full engine overhead.
 
-**A coverage report in CI.** The `@authwrite/testing` package has `coverageReport()` but there's
+**A coverage report in CI.** The `@daltonr/authwrite-testing` package has `coverageReport()` but there's
 no guidance on how to wire this into a CI assertion: "fail the build if any policy rule is
 untested." That would be a strong forcing function for keeping tests comprehensive.
 

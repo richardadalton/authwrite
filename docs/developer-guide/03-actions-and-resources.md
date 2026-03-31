@@ -27,7 +27,7 @@ These are not a formal type system — they are a way of thinking about what to 
 ## All three as `evaluate()` calls
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 const engine = createAuthEngine({ policy })
 

@@ -1,6 +1,6 @@
 # Loader YAML API Reference
 
-This reference covers `@authwrite/loader-yaml` — a file-based `PolicyLoader` that reads policy definitions from YAML or JSON files.
+This reference covers `@daltonr/authwrite-loader-yaml` — a file-based `PolicyLoader` that reads policy definitions from YAML or JSON files.
 
 ---
 
@@ -12,7 +12,7 @@ export function createFileLoader<S extends Subject = Subject, R extends Resource
 ): PolicyLoader<S, R>
 ```
 
-Factory function that returns a `PolicyLoader` backed by a file on disk. Supports `.yaml`, `.yml`, and `.json` file extensions. Pass the returned loader to `fromLoader()` from `@authwrite/core` to convert it into a `PolicyResolver` suitable for `createAuthEngine`.
+Factory function that returns a `PolicyLoader` backed by a file on disk. Supports `.yaml`, `.yml`, and `.json` file extensions. Pass the returned loader to `fromLoader()` from `@daltonr/authwrite-core` to convert it into a `PolicyResolver` suitable for `createAuthEngine`.
 
 ### `FileLoaderConfig` options
 
@@ -145,7 +145,7 @@ Subscribes to file changes. When the file at `config.path` changes on disk, the 
 File watching is implemented with Node's `fs.watch` with a 50 ms debounce to coalesce rapid successive write events. The recommended pattern is to pass the loader to `fromLoader()`, which wires `watch()` automatically:
 
 ```typescript
-import { createAuthEngine, fromLoader } from '@authwrite/core'
+import { createAuthEngine, fromLoader } from '@daltonr/authwrite-core'
 
 const loader = createFileLoader({ path: './policy.yaml', rules: myRegistry })
 

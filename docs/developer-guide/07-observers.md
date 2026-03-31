@@ -9,7 +9,7 @@ Authorization decisions are only half of what an authorization system needs to d
 An observer is any object that implements `AuthObserver`. All three methods are optional, but in practice most observers implement at least `onDecision`.
 
 ```typescript
-import type { AuthObserver, DecisionEvent, AuthContext, PolicyDefinition } from '@authwrite/core'
+import type { AuthObserver, DecisionEvent, AuthContext, PolicyDefinition } from '@daltonr/authwrite-core'
 
 const myObserver: AuthObserver = {
   onDecision(event: DecisionEvent): void | Promise<void> {
@@ -156,10 +156,10 @@ This is useful for cache invalidation (if you cache field-level decisions anywhe
 
 ## OpenTelemetry observer
 
-The `@authwrite/otel` package provides a pre-built observer that emits spans and attributes conforming to OpenTelemetry semantic conventions. Attach it the same way as any observer:
+The `@daltonr/authwrite-otel` package provides a pre-built observer that emits spans and attributes conforming to OpenTelemetry semantic conventions. Attach it the same way as any observer:
 
 ```typescript
-import { createOtelObserver } from '@authwrite/otel'
+import { createOtelObserver } from '@daltonr/authwrite-otel'
 
 engine.addObserver(createOtelObserver({ tracer: myTracer }))
 ```

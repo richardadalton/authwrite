@@ -1,6 +1,6 @@
 # Express API Reference
 
-This reference covers `@authwrite/express` — the Express middleware adapter for `@authwrite/core`.
+This reference covers `@daltonr/authwrite-express` — the Express middleware adapter for `@daltonr/authwrite-core`.
 
 ---
 

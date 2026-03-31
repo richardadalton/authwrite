@@ -63,7 +63,7 @@ In `lockdown` mode, the engine skips policy evaluation and fires observers with 
 Pass `mode` in the engine config. The default is `'enforce'`.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 // Start in audit mode during rollout
 const engine = createAuthEngine({

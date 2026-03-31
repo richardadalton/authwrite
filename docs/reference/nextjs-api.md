@@ -1,6 +1,6 @@
 # Next.js API Reference
 
-This reference covers `@authwrite/nextjs` — the App Router route handler wrapper for `@authwrite/core`.
+This reference covers `@daltonr/authwrite-nextjs` — the App Router route handler wrapper for `@daltonr/authwrite-core`.
 
 ---
 
@@ -84,7 +84,7 @@ HTTP status code is always `403`. The response is constructed with the standard 
 
 ## No hard next dependency
 
-`@authwrite/nextjs` uses only standard Web API types (`Request`, `Response`) and defines `RouteContext` locally to match the Next.js 15 async params shape. It has no hard peer dependency on the `next` package and works with any Next.js version that uses App Router route handlers.
+`@daltonr/authwrite-nextjs` uses only standard Web API types (`Request`, `Response`) and defines `RouteContext` locally to match the Next.js 15 async params shape. It has no hard peer dependency on the `next` package and works with any Next.js version that uses App Router route handlers.
 
 ---
 
@@ -92,8 +92,8 @@ HTTP status code is always `403`. The response is constructed with the standard 
 
 ```typescript
 // app/documents/[id]/route.ts
-import { createAuthEngine } from '@authwrite/core'
-import { withAuth } from '@authwrite/nextjs'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { withAuth } from '@daltonr/authwrite-nextjs'
 
 const engine = createAuthEngine({ policy: documentPolicy })
 

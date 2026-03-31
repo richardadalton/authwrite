@@ -23,7 +23,7 @@ AuthEngine is a library — not a sidecar, not a DSL, not infrastructure — tha
 ## Quick start
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 const engine = createAuthEngine({
   policy: {
@@ -200,7 +200,7 @@ enforcer.setMode('lockdown')
 ## Testing
 
 ```typescript
-import { decisionRecorder, coverageReport } from '@authwrite/testing'
+import { decisionRecorder, coverageReport } from '@daltonr/authwrite-testing'
 
 const recorder = decisionRecorder()
 const engine = createAuthEngine({ policy, observers: [recorder] })
@@ -218,17 +218,17 @@ console.log(report.coveragePercent) // 87.5
 
 | Package | Description | Status |
 |---|---|---|
-| `@authwrite/core` | Zero-dependency engine, all types | ✅ |
-| `@authwrite/testing` | `decisionRecorder`, `coverageReport` | ✅ |
-| `@authwrite/express` | Express middleware | 🚧 |
-| `@authwrite/fastify` | Fastify plugin | 🚧 |
-| `@authwrite/nextjs` | Next.js App Router wrapper | 🚧 |
-| `@authwrite/hono` | Hono middleware (edge-compatible) | 🚧 |
-| `@authwrite/observer-pg` | Postgres audit log observer | 🚧 |
-| `@authwrite/observer-redis` | Redis decision cache observer | 🚧 |
-| `@authwrite/observer-otel` | OpenTelemetry spans and metrics | 🚧 |
-| `@authwrite/loader-db` | Hot-reloadable database policy loader | 🚧 |
-| `@authwrite/loader-yaml` | YAML/JSON file policy loader | 🚧 |
+| `@daltonr/authwrite-core` | Zero-dependency engine, all types | ✅ |
+| `@daltonr/authwrite-testing` | `decisionRecorder`, `coverageReport` | ✅ |
+| `@daltonr/authwrite-express` | Express middleware | 🚧 |
+| `@daltonr/authwrite-fastify` | Fastify plugin | 🚧 |
+| `@daltonr/authwrite-nextjs` | Next.js App Router wrapper | 🚧 |
+| `@daltonr/authwrite-hono` | Hono middleware (edge-compatible) | 🚧 |
+| `@daltonr/authwrite-observer-pg` | Postgres audit log observer | 🚧 |
+| `@daltonr/authwrite-observer-redis` | Redis decision cache observer | 🚧 |
+| `@daltonr/authwrite-observer-otel` | OpenTelemetry spans and metrics | 🚧 |
+| `@daltonr/authwrite-loader-db` | Hot-reloadable database policy loader | 🚧 |
+| `@daltonr/authwrite-loader-yaml` | YAML/JSON file policy loader | 🚧 |
 
 ---
 

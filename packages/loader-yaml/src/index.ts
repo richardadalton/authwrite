@@ -10,7 +10,7 @@ import type {
   PolicyRule,
   Resource,
   Subject,
-} from '@authwrite/core'
+} from '@daltonr/authwrite-core'
 
 // ─── Serializable file schema ─────────────────────────────────────────────────
 //

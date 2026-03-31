@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach } from 'vitest'
-import { createFileLoader } from '@authwrite/loader-yaml'
-import { createAuthEngine, fromLoader } from '@authwrite/core'
+import { createFileLoader } from '@daltonr/authwrite-loader-yaml'
+import { createAuthEngine, fromLoader } from '@daltonr/authwrite-core'
 import { writeFileSync, rmSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import type { Subject, Resource, AuthContext } from '@authwrite/core'
+import type { Subject, Resource, AuthContext } from '@daltonr/authwrite-core'
 
 // ─── Test domain types ────────────────────────────────────────────────────────
 

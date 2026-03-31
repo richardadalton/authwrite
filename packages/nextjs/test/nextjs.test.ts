@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { withAuth } from '@authwrite/nextjs'
-import { createAuthEngine } from '@authwrite/core'
-import type { RouteContext } from '@authwrite/nextjs'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import { withAuth } from '@daltonr/authwrite-nextjs'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { RouteContext } from '@daltonr/authwrite-nextjs'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import type { AuthEvaluator, Subject, Resource, Action } from '@authwrite/core'
+import type { AuthEvaluator, Subject, Resource, Action } from '@daltonr/authwrite-core'
 
 // ─── Link types ───────────────────────────────────────────────────────────────
 

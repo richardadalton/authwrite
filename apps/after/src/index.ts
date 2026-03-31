@@ -1,8 +1,8 @@
 import express, { type Request, type Response } from 'express'
-import { createAuthEngine }                  from '@authwrite/core'
+import { createAuthEngine }                  from '@daltonr/authwrite-core'
 
-import { createExpressAuth }                  from '@authwrite/express'
-import { createDevTools }                     from '@authwrite/devtools'
+import { createExpressAuth }                  from '@daltonr/authwrite-express'
+import { createDevTools }                     from '@daltonr/authwrite-devtools'
 import { documentPolicy }                     from './policy.js'
 import { USERS, getDocById, getAllDocs } from './data.js'
 import type { User, Doc }                     from './data.js'

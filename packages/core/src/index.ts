@@ -68,6 +68,9 @@ export interface Decision {
   override?: 'permissive' | 'suspended' | 'lockdown'
   /** present when evaluation threw and onError fired */
   error?: Error
+  /** Structured trace of why the deciding rule matched.
+   *  Present when the deciding rule defines an `explain` function. */
+  matchExplanation?: unknown
 }
 
 // ─── Policy rules ────────────────────────────────────────────────────────────
@@ -92,6 +95,10 @@ export interface PolicyRule<
   deny?: (A | '*')[]
   /** Secondary condition that must be true for the rule to apply. */
   condition?: (ctx: AuthContext<S, R>) => boolean
+  /** Returns structured trace data explaining why this rule matched.
+   *  Called by the engine on the deciding rule and attached to Decision.matchExplanation.
+   *  Pair with `fromRule()` from @daltonr/authwrite-rulewrite to populate automatically. */
+  explain?: (ctx: AuthContext<S, R>) => unknown
 }
 
 export interface FieldRule<S extends Subject = Subject, R extends Resource = Resource> {
@@ -185,7 +192,7 @@ export type PolicyResolver<
 // These helpers live at module scope so evaluatePolicy can be exported as a
 // pure function independent of any engine instance.
 
-function getPolicyLabel(policy: PolicyDefinition): string {
+function getPolicyLabel(policy: { id: string; version?: string }): string {
   return policy.version
     ? `${policy.id}@${policy.version}`
     : policy.id
@@ -264,14 +271,15 @@ export function evaluatePolicy<
 
   return {
     allowed,
-    effect:      allowed ? 'allow' : 'deny',
+    effect:           allowed ? 'allow' : 'deny',
     reason,
-    rule:        decidingRule as PolicyRule | undefined,
-    policy:      getPolicyLabel(policy),
-    context:     ctx,
-    evaluatedAt: new Date(),
-    durationMs:  Date.now() - start,
+    rule:             decidingRule as PolicyRule | undefined,
+    policy:           getPolicyLabel(policy),
+    context:          ctx,
+    evaluatedAt:      new Date(),
+    durationMs:       Date.now() - start,
     defaulted,
+    matchExplanation: decidingRule?.explain?.(ctx),
   }
 }
 
@@ -498,8 +506,8 @@ function buildEngine<
   A extends string = string,
 >(config: AuthEngineConfig<S, R>): AuthEngine<S, R, A> {
   let activeResolver:   PolicyResolver<S, R, A> = config.policy as PolicyResolver<S, R, A>
-  let lastKnownPolicy:  PolicyDefinition<S, R> | undefined = isStaticPolicy(config.policy)
-    ? config.policy as PolicyDefinition<S, R>
+  let lastKnownPolicy:  PolicyDefinition<S, R> | undefined = isStaticPolicy(activeResolver)
+    ? activeResolver as PolicyDefinition<S, R>
     : undefined
   let currentMode: EnforcerMode = config.mode ?? 'enforce'
 

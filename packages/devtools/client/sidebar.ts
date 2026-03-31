@@ -9,19 +9,26 @@ const PORT = typeof __DEVTOOLS_PORT__ !== 'undefined' ? __DEVTOOLS_PORT__ : 4999
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface EvaluationResult {
+  satisfied: boolean
+  label:     string
+  children?: EvaluationResult[]
+}
+
 interface PersistedDecision {
-  id:         string
-  timestamp:  number
-  subject:    Record<string, unknown>
-  resource?:  Record<string, unknown>
-  action:     string
-  policy:     string
-  effect:     'allow' | 'deny'
-  allowed:    boolean
-  reason:     string
-  defaulted:  boolean
-  durationMs: number
-  override?:  'permissive' | 'suspended' | 'lockdown'
+  id:               string
+  timestamp:        number
+  subject:          Record<string, unknown>
+  resource?:        Record<string, unknown>
+  action:           string
+  policy:           string
+  effect:           'allow' | 'deny'
+  allowed:          boolean
+  reason:           string
+  defaulted:        boolean
+  durationMs:       number
+  override?:        'permissive' | 'suspended' | 'lockdown'
+  matchExplanation?: unknown
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -128,11 +135,18 @@ function renderDetail(d: PersistedDecision, isFlagging: boolean): string {
     row('ms',       `${d.durationMs.toFixed(2)} ms`),
   ].filter(Boolean).join('')
 
+  const explainSection = d.matchExplanation
+    ? `<div class="explain-section">
+        <div class="explain-title">Rule trace</div>
+        <div class="explain-tree">${renderExplainNode(d.matchExplanation as EvaluationResult)}</div>
+      </div>`
+    : ''
+
   const flagSection = isFlagging
     ? renderFlagForm(d)
     : `<button class="btn btn--ghost flag-open-btn" data-action="flag-open" data-id="${d.id}">Flag as wrong</button>`
 
-  return `<div class="detail"><div class="detail-rows">${rows}</div>${flagSection}</div>`
+  return `<div class="detail"><div class="detail-rows">${rows}</div>${explainSection}${flagSection}</div>`
 }
 
 function row(label: string, value: string): string {
@@ -156,6 +170,24 @@ function renderFlagForm(d: PersistedDecision): string {
         <button class="btn btn--ghost"   data-action="flag-cancel" data-id="${d.id}">Cancel</button>
       </div>
     </div>`
+}
+
+function renderExplainNode(node: EvaluationResult, depth = 0): string {
+  const cls     = node.satisfied ? 'explain-node--pass' : 'explain-node--fail'
+  const dot     = node.satisfied ? '●' : '○'
+  const dotCls  = node.satisfied ? 'explain-dot--pass' : 'explain-dot--fail'
+  const indent  = depth > 0 ? `style="margin-left:${depth * 12}px"` : ''
+  const children = node.children?.length
+    ? node.children.map(c => renderExplainNode(c, depth + 1)).join('')
+    : ''
+  return `<div class="explain-node ${cls}" ${indent}>
+    <span class="explain-dot ${dotCls}">${dot}</span>
+    <span class="explain-label">${escapeHtml(node.label)}</span>
+  </div>${children}`
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
 // ─── Policy section ───────────────────────────────────────────────────────────
@@ -910,6 +942,55 @@ const CSS = `
   }
 
   .status .dot.dot--connected { background: var(--allowed); }
+
+  /* ── Rule trace (matchExplanation) ── */
+
+  .explain-section {
+    margin-top:    8px;
+    margin-bottom: 8px;
+    border:        1px solid var(--border);
+    border-radius: 4px;
+    overflow:      hidden;
+  }
+
+  .explain-title {
+    background:    var(--bg-deep);
+    color:         var(--dim);
+    font-size:     10px;
+    font-weight:   600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding:       4px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .explain-tree {
+    padding:     6px 8px;
+    background:  var(--bg);
+  }
+
+  .explain-node {
+    display:     flex;
+    align-items: center;
+    gap:         5px;
+    padding:     2px 0;
+    font-size:   11px;
+    line-height: 1.3;
+  }
+
+  .explain-dot {
+    font-size:   9px;
+    flex-shrink: 0;
+    width:       10px;
+    text-align:  center;
+  }
+
+  .explain-dot--pass { color: var(--allowed); }
+  .explain-dot--fail { color: var(--denied); }
+
+  .explain-label { color: var(--text); }
+
+  .explain-node--fail .explain-label { color: var(--muted); }
 `
 
 // ─── Utilities ────────────────────────────────────────────────────────────────

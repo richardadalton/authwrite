@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest'
 import * as fc from 'fast-check'
-import { decisionRecorder, coverageReport } from '@authwrite/testing'
-import type { AuthEngine, Decision, DecisionEvent, PolicyDefinition } from '@authwrite/core'
+import { decisionRecorder, coverageReport } from '@daltonr/authwrite-testing'
+import type { AuthEngine, Decision, DecisionEvent, PolicyDefinition } from '@daltonr/authwrite-core'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

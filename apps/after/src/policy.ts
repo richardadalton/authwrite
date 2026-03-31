@@ -1,4 +1,4 @@
-import type { PolicyDefinition } from '@authwrite/core'
+import type { PolicyDefinition } from '@daltonr/authwrite-core'
 import type { User, Doc } from './data.js'
 
 // ─── Policy ───────────────────────────────────────────────────────────────────

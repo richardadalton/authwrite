@@ -1,6 +1,6 @@
 # Fastify API Reference
 
-This reference covers `@authwrite/fastify` — the Fastify pre-handler hook adapter for `@authwrite/core`.
+This reference covers `@daltonr/authwrite-fastify` — the Fastify pre-handler hook adapter for `@daltonr/authwrite-core`.
 
 ---
 
@@ -57,7 +57,7 @@ req.authDecision: Decision
 
 The `Decision` object produced by `engine.evaluate()` is attached to the Fastify `Request` as `authDecision` via module augmentation. It is set on every request where evaluation completes, regardless of the outcome.
 
-To use `req.authDecision` in TypeScript, the `@authwrite/fastify` module augments `@fastify/request` automatically — no additional declaration is needed.
+To use `req.authDecision` in TypeScript, the `@daltonr/authwrite-fastify` module augments `@fastify/request` automatically — no additional declaration is needed.
 
 See the [`Decision`](./core-api.md#decision) type reference for the full property table.
 

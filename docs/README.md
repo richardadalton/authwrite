@@ -31,6 +31,7 @@ This documentation covers the full Authwrite authorization library — a zero-de
 | 11 | [HATEOAS](./developer-guide/11-hateoas.md) | How to build permission-aware hypermedia links using `buildLinks`, `embedLinks`, and `linksFromDecisions`. |
 | 12 | [Policy Resolvers](./developer-guide/12-policy-resolver.md) | How `PolicyResolver` supports static policies, dynamic resolver functions, and composition strategies (`intersect`, `union`, `firstMatch`). Includes `fromLoader` and `evaluatePolicy`. |
 | 13 | [Authorization Anti-Patterns](./developer-guide/13-anti-patterns.md) | Thirteen common authorization mistakes — with bad code examples, explanations of why each fails, and the Authwrite fix. |
+| 14 | [Composable Rules with rulewrite](./developer-guide/14-rulewrite.md) | How to build rules from composable predicates using `@daltonr/rulewrite`, wire them into a policy with `fromRule()`, and read the structured match trace from `Decision.matchExplanation`. |
 
 ---
 
@@ -51,6 +52,7 @@ This documentation covers the full Authwrite authorization library — a zero-de
 | `@daltonr/authwrite-observer-pg` | [observer-pg-api.md](./reference/observer-pg-api.md) | `createPgObserver`, `PgObserverConfig`, `QueryClient`, table schema, and fire-and-forget write behaviour. |
 | `@daltonr/authwrite-observer-redis` | [observer-redis-api.md](./reference/observer-redis-api.md) | `createRedisObserver`, `RedisObserverConfig`, `RedisObserver`, `lookup`, `invalidate`, `flush`, and TTL behaviour. |
 | `@daltonr/authwrite-devtools` | [devtools-api.md](./reference/devtools-api.md) | `createDevTools`, `DevToolsObserver`, `createDevServer`, `PolicySwitcherOptions`, decision flagging, and dev server endpoints. |
+| `@daltonr/authwrite-rulewrite` | [rulewrite-api.md](./reference/rulewrite-api.md) | `fromRule`, `EvaluatableRule`, `RuleMatchFns`, and `Decision.matchExplanation`. |
 
 ---
 

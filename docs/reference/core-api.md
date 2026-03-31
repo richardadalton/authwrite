@@ -1,6 +1,6 @@
 # Core API Reference
 
-This reference covers `@authwrite/core` — the zero-dependency TypeScript authorization engine.
+This reference covers `@daltonr/authwrite-core` — the zero-dependency TypeScript authorization engine.
 
 ---
 
@@ -96,7 +96,7 @@ Use this for:
 - Composition helpers (internally)
 
 ```typescript
-import { evaluatePolicy } from '@authwrite/core'
+import { evaluatePolicy } from '@daltonr/authwrite-core'
 
 const decision = evaluatePolicy(myPolicy, {
   subject:  user,

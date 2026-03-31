@@ -5,20 +5,20 @@ import type {
   AuthObserver,
   DecisionEvent,
   PolicyDefinition,
-} from '@authwrite/core'
+} from '@daltonr/authwrite-core'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export interface OtelObserverConfig {
   /**
    * Tracer to use for span creation.
-   * Defaults to trace.getTracer('@authwrite/observer-otel'), which picks up
+   * Defaults to trace.getTracer('@daltonr/authwrite-observer-otel'), which picks up
    * whatever TracerProvider has been registered globally.
    */
   tracer?: Tracer
   /**
    * Meter to use for metric instruments.
-   * Defaults to metrics.getMeter('@authwrite/observer-otel').
+   * Defaults to metrics.getMeter('@daltonr/authwrite-observer-otel').
    */
   meter?: Meter
   /**
@@ -39,8 +39,8 @@ const SPAN_NAME          = 'authz.evaluate'
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 export function createOtelObserver(config: OtelObserverConfig = {}): AuthObserver {
-  const tracer = config.tracer ?? trace.getTracer('@authwrite/observer-otel')
-  const meter  = config.meter  ?? metrics.getMeter('@authwrite/observer-otel')
+  const tracer = config.tracer ?? trace.getTracer('@daltonr/authwrite-observer-otel')
+  const meter  = config.meter  ?? metrics.getMeter('@daltonr/authwrite-observer-otel')
 
   // Instruments are created once and reused — creating them per-decision is
   // wrong and would break SDK aggregation.

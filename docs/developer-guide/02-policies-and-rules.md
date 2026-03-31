@@ -9,7 +9,7 @@ The policy is the heart of Authwrite. Everything else — decisions, observers, 
 There is no DSL, no YAML, no schema registry, and no proprietary configuration language. A **PolicyDefinition** is a TypeScript object literal. Your IDE understands it fully: autocomplete works, type errors surface immediately, and you can jump to definition on every field.
 
 ```typescript
-import type { PolicyDefinition } from '@authwrite/core'
+import type { PolicyDefinition } from '@daltonr/authwrite-core'
 
 const policy: PolicyDefinition = {
   id: 'app-policy',
@@ -52,7 +52,7 @@ The only legitimate use of `defaultEffect: 'allow'` is an internal tooling polic
 A **PolicyRule** has six fields:
 
 ```typescript
-import type { PolicyRule } from '@authwrite/core'
+import type { PolicyRule } from '@daltonr/authwrite-core'
 
 const rule: PolicyRule = {
   id: 'owner-full-access',
@@ -151,8 +151,8 @@ When a role should be permitted every action on a matched resource, use the wild
 Here is a complete policy for a document management system. It covers four common patterns: ownership, role-based override, archived state blocking mutations, and a catch-all deny.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 interface AppSubject extends Subject {
   roles: string[]
@@ -233,7 +233,7 @@ As your policy grows, `match` functions repeat themselves. Extract them:
 
 ```typescript
 // predicates.ts
-import type { AuthContext } from '@authwrite/core'
+import type { AuthContext } from '@daltonr/authwrite-core'
 import type { AppSubject, DocumentResource } from './types'
 
 type AppCtx = AuthContext<AppSubject, DocumentResource>

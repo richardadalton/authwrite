@@ -1,5 +1,5 @@
 {
-  "name": "@authwrite/after",
+  "name": "@daltonr/authwrite-after",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -7,9 +7,9 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
-    "@authwrite/core":     "*",
-    "@authwrite/express":  "*",
-    "@authwrite/devtools": "*",
+    "@daltonr/authwrite-core":     "*",
+    "@daltonr/authwrite-express":  "*",
+    "@daltonr/authwrite-devtools": "*",
     "express":             "^5.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 # Testing API Reference
 
-This reference covers `@authwrite/testing` — utilities for asserting authorization behaviour and measuring policy coverage in test suites.
+This reference covers `@daltonr/authwrite-testing` — utilities for asserting authorization behaviour and measuring policy coverage in test suites.
 
 ---
 
@@ -81,8 +81,8 @@ Coverage is determined by matching rule `id` values against `event.decision.reas
 Use `decisionRecorder` and `coverageReport` together to assert behaviour and track policy coverage across your test suite.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import { decisionRecorder, coverageReport } from '@authwrite/testing'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { decisionRecorder, coverageReport } from '@daltonr/authwrite-testing'
 import { myPolicy } from './policies/my-policy'
 
 const recorder = decisionRecorder()

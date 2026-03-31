@@ -6,25 +6,25 @@ Authwrite ships as a family of focused packages. The core package has zero runti
 
 | Package | Description |
 | --- | --- |
-| `@authwrite/core` | Zero-dependency engine, evaluator, and all types |
-| `@authwrite/testing` | `decisionRecorder` and `coverageReport` for policy testing |
-| `@authwrite/express` | Express middleware adapter |
-| `@authwrite/fastify` | Fastify pre-handler hook adapter |
-| `@authwrite/nextjs` | Next.js App Router route handler wrapper |
-| `@authwrite/hono` | Hono middleware adapter (edge-runtime compatible) |
-| `@authwrite/hateoas` | Permission-aware hypermedia link building (HAL `_links`) |
-| `@authwrite/loader-yaml` | YAML/JSON file-based policy loader |
-| `@authwrite/observer-otel` | OpenTelemetry spans and metrics observer |
+| `@daltonr/authwrite-core` | Zero-dependency engine, evaluator, and all types |
+| `@daltonr/authwrite-testing` | `decisionRecorder` and `coverageReport` for policy testing |
+| `@daltonr/authwrite-express` | Express middleware adapter |
+| `@daltonr/authwrite-fastify` | Fastify pre-handler hook adapter |
+| `@daltonr/authwrite-nextjs` | Next.js App Router route handler wrapper |
+| `@daltonr/authwrite-hono` | Hono middleware adapter (edge-runtime compatible) |
+| `@daltonr/authwrite-hateoas` | Permission-aware hypermedia link building (HAL `_links`) |
+| `@daltonr/authwrite-loader-yaml` | YAML/JSON file-based policy loader |
+| `@daltonr/authwrite-observer-otel` | OpenTelemetry spans and metrics observer |
 
 ---
 
 ## Step 1 — Install the core package
 
 ```bash
-npm install @authwrite/core
+npm install @daltonr/authwrite-core
 ```
 
-`@authwrite/core` is the only required package. Everything else is optional and additive.
+`@daltonr/authwrite-core` is the only required package. Everything else is optional and additive.
 
 ---
 
@@ -34,22 +34,22 @@ Add whichever extras your project needs.
 
 ```bash
 # Policy testing utilities
-npm install --save-dev @authwrite/testing
+npm install --save-dev @daltonr/authwrite-testing
 
 # Framework adapters
-npm install @authwrite/express
-npm install @authwrite/fastify
-npm install @authwrite/nextjs
-npm install @authwrite/hono
+npm install @daltonr/authwrite-express
+npm install @daltonr/authwrite-fastify
+npm install @daltonr/authwrite-nextjs
+npm install @daltonr/authwrite-hono
 
 # HATEOAS hypermedia links
-npm install @authwrite/hateoas
+npm install @daltonr/authwrite-hateoas
 
 # Load policies from YAML or JSON files
-npm install @authwrite/loader-yaml
+npm install @daltonr/authwrite-loader-yaml
 
 # OpenTelemetry observability
-npm install @authwrite/observer-otel
+npm install @daltonr/authwrite-observer-otel
 ```
 
 ---
@@ -60,16 +60,16 @@ Some packages require peers that your project must supply.
 
 | Package | Peer dependency | Version |
 | --- | --- | --- |
-| `@authwrite/express` | `express` | `^4.0 \|\| ^5.0` |
-| `@authwrite/fastify` | `fastify` | `^4.0 \|\| ^5.0` |
-| `@authwrite/nextjs` | none | — |
-| `@authwrite/hono` | `hono` | `^4.0` |
-| `@authwrite/hateoas` | none | — |
-| `@authwrite/observer-otel` | `@opentelemetry/api` | `^1.0` |
-| `@authwrite/loader-yaml` | `js-yaml` | `^4.0` |
-| `@authwrite/testing` | `vitest` or `jest` | any |
+| `@daltonr/authwrite-express` | `express` | `^4.0 \|\| ^5.0` |
+| `@daltonr/authwrite-fastify` | `fastify` | `^4.0 \|\| ^5.0` |
+| `@daltonr/authwrite-nextjs` | none | — |
+| `@daltonr/authwrite-hono` | `hono` | `^4.0` |
+| `@daltonr/authwrite-hateoas` | none | — |
+| `@daltonr/authwrite-observer-otel` | `@opentelemetry/api` | `^1.0` |
+| `@daltonr/authwrite-loader-yaml` | `js-yaml` | `^4.0` |
+| `@daltonr/authwrite-testing` | `vitest` or `jest` | any |
 
-`@authwrite/core`, `@authwrite/nextjs`, and `@authwrite/hateoas` have no peer dependencies.
+`@daltonr/authwrite-core`, `@daltonr/authwrite-nextjs`, and `@daltonr/authwrite-hateoas` have no peer dependencies.
 
 ---
 
@@ -78,7 +78,7 @@ Some packages require peers that your project must supply.
 Once installed, confirm everything is wired correctly by creating an engine with a minimal policy and evaluating a decision.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 
 const engine = createAuthEngine({
   policy: {
@@ -113,7 +113,7 @@ A few things to notice:
 
 ## TypeScript
 
-All packages are written in TypeScript and ship their own type declarations. No `@types/*` package is needed for any `@authwrite/*` package.
+All packages are written in TypeScript and ship their own type declarations. No `@types/*` package is needed for any `@daltonr/authwrite-*` package.
 
 The minimum supported TypeScript version is **5.0**.
 

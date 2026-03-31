@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { DevToolsObserver, createDevServer } from '@authwrite/devtools'
+import { DevToolsObserver, createDevServer } from '@daltonr/authwrite-devtools'
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import type { DecisionEvent } from '@authwrite/core'
+import type { DecisionEvent } from '@daltonr/authwrite-core'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

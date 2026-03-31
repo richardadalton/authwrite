@@ -35,13 +35,13 @@ Incoming request
 
 ## createAuthMiddleware
 
-The Express adapter is in `@authwrite/express`. Its configuration object has five fields: a required `engine`, required resolver functions for `subject`, `resource`, and `action`, and an optional `onDeny` handler.
+The Express adapter is in `@daltonr/authwrite-express`. Its configuration object has five fields: a required `engine`, required resolver functions for `subject`, `resource`, and `action`, and an optional `onDeny` handler.
 
 ```typescript
 import express from 'express'
-import { createEngine } from '@authwrite/core'
-import { createAuthMiddleware } from '@authwrite/express'
-import type { AuthMiddlewareConfig } from '@authwrite/express'
+import { createEngine } from '@daltonr/authwrite-core'
+import { createAuthMiddleware } from '@daltonr/authwrite-express'
+import type { AuthMiddlewareConfig } from '@daltonr/authwrite-express'
 
 const app = express()
 const engine = createEngine({ policy: documentPolicy })
@@ -148,7 +148,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 The `engine` field in `AuthMiddlewareConfig` accepts any `AuthEvaluator`. Both `AuthEngine` and `Enforcer` implement `AuthEvaluator`, so you can pass either one. Switch to the Enforcer during rollout and the rest of the middleware configuration stays identical.
 
 ```typescript
-import { createEnforcer } from '@authwrite/core'
+import { createEnforcer } from '@daltonr/authwrite-core'
 
 const engine = createEngine({ policy: documentPolicy })
 const enforcer = createEnforcer(engine, { mode: 'audit' })
@@ -198,9 +198,9 @@ Per-route middleware is more explicit than a single catch-all middleware with a 
 
 ```typescript
 import express, { Request, Response, NextFunction } from 'express'
-import { createEngine } from '@authwrite/core'
-import { createAuthMiddleware } from '@authwrite/express'
-import { createFileLoader } from '@authwrite/loader-yaml'
+import { createEngine } from '@daltonr/authwrite-core'
+import { createAuthMiddleware } from '@daltonr/authwrite-express'
+import { createFileLoader } from '@daltonr/authwrite-loader-yaml'
 
 interface Subject { id: string; role: string }
 interface Resource { id: string; ownerId: string; status: string }
@@ -268,12 +268,12 @@ async function startServer() {
 
 ## Fastify adapter
 
-The Fastify adapter is in `@authwrite/fastify`. It returns a `preHandlerHookHandler` — a Fastify lifecycle hook that runs before your route handler and halts the request with a 403 if the policy denies access.
+The Fastify adapter is in `@daltonr/authwrite-fastify`. It returns a `preHandlerHookHandler` — a Fastify lifecycle hook that runs before your route handler and halts the request with a 403 if the policy denies access.
 
 ```typescript
 import Fastify from 'fastify'
-import { createAuthEngine } from '@authwrite/core'
-import { createAuthHook } from '@authwrite/fastify'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { createAuthHook } from '@daltonr/authwrite-fastify'
 
 const app = Fastify()
 const engine = createAuthEngine({ policy: documentPolicy })
@@ -299,11 +299,11 @@ For a complete configuration reference see [fastify-api.md](../reference/fastify
 
 ## Next.js adapter
 
-The Next.js adapter is in `@authwrite/nextjs`. It wraps an App Router route handler function, enforcing authorization before the handler executes.
+The Next.js adapter is in `@daltonr/authwrite-nextjs`. It wraps an App Router route handler function, enforcing authorization before the handler executes.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import { withAuth } from '@authwrite/nextjs'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { withAuth } from '@daltonr/authwrite-nextjs'
 
 const engine = createAuthEngine({ policy: documentPolicy })
 
@@ -333,12 +333,12 @@ For a complete configuration reference see [nextjs-api.md](../reference/nextjs-a
 
 ## Hono adapter
 
-The Hono adapter is in `@authwrite/hono`. It returns a standard `MiddlewareHandler` compatible with Hono's `app.use()` or inline route middleware.
+The Hono adapter is in `@daltonr/authwrite-hono`. It returns a standard `MiddlewareHandler` compatible with Hono's `app.use()` or inline route middleware.
 
 ```typescript
 import { Hono } from 'hono'
-import { createAuthEngine } from '@authwrite/core'
-import { createAuthMiddleware, AUTH_DECISION_KEY } from '@authwrite/hono'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { createAuthMiddleware, AUTH_DECISION_KEY } from '@daltonr/authwrite-hono'
 
 const app   = new Hono()
 const engine = createAuthEngine({ policy: documentPolicy })

@@ -1,6 +1,6 @@
 # OpenTelemetry Observer API Reference
 
-This reference covers `@authwrite/observer-otel` — an `AuthObserver` that emits OpenTelemetry spans and metrics for every authorization decision.
+This reference covers `@daltonr/authwrite-observer-otel` — an `AuthObserver` that emits OpenTelemetry spans and metrics for every authorization decision.
 
 ---
 
@@ -22,8 +22,8 @@ Factory function that returns an `AuthObserver`. Pass the result in the `observe
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `tracer` | `Tracer` | `trace.getTracer('@authwrite/observer-otel')` | The OpenTelemetry `Tracer` used to create spans. When omitted, the global tracer provider is used. |
-| `meter` | `Meter` | `metrics.getMeter('@authwrite/observer-otel')` | The OpenTelemetry `Meter` used to create metric instruments. When omitted, the global meter provider is used. |
+| `tracer` | `Tracer` | `trace.getTracer('@daltonr/authwrite-observer-otel')` | The OpenTelemetry `Tracer` used to create spans. When omitted, the global tracer provider is used. |
+| `meter` | `Meter` | `metrics.getMeter('@daltonr/authwrite-observer-otel')` | The OpenTelemetry `Meter` used to create metric instruments. When omitted, the global meter provider is used. |
 | `attributes` | `Record<string, string \| number \| boolean>` | `{}` | (optional) Static attributes added to every span and every metric data point produced by this observer. |
 
 All three options are optional. Calling `createOtelObserver()` with no arguments uses the global tracer and meter providers.

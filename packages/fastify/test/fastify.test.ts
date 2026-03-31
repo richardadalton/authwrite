@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAuthHook } from '@authwrite/fastify'
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthHook } from '@daltonr/authwrite-fastify'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 import type { FastifyRequest, FastifyReply } from 'fastify'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Domain types ─────────────────────────────────────────────────────────────
 

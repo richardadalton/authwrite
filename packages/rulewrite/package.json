@@ -1,0 +1,34 @@
+{
+  "name": "@daltonr/authwrite-rulewrite",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Bridge between @daltonr/rulewrite and @daltonr/authwrite-core — compose PolicyRules from evaluatable rule objects.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git",
+    "directory": "packages/rulewrite"
+  },
+  "keywords": ["authorization", "authz", "rulewrite", "policy", "specification", "predicate"],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "prepublishOnly": "test -d dist && echo 'dist already built, skipping' || (npm run clean && npm run build)"
+  },
+  "dependencies": {
+    "@daltonr/authwrite-core": "*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

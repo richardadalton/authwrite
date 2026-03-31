@@ -1,4 +1,4 @@
-import type { PolicyDefinition } from '@authwrite/core'
+import type { PolicyDefinition } from '@daltonr/authwrite-core'
 import type { Doc, User } from './data.js'
 
 export const documentPolicy: PolicyDefinition<User, Doc> = {

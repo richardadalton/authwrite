@@ -13,7 +13,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build -w packages/core && npm run build -w packages/express && npm run build -w packages/fastify && npm run build -w packages/nextjs && npm run build -w packages/hono && npm run build -w packages/observer-pg && npm run build -w packages/observer-redis && npm run build -w packages/observer-otel && npm run build -w packages/loader-db && npm run build -w packages/loader-yaml && npm run build -w packages/testing && npm run build -w packages/hateoas && npm run build -w packages/devtools",
+    "build": "npm run build -w packages/core && npm run build -w packages/express && npm run build -w packages/fastify && npm run build -w packages/nextjs && npm run build -w packages/hono && npm run build -w packages/observer-pg && npm run build -w packages/observer-redis && npm run build -w packages/observer-otel && npm run build -w packages/loader-db && npm run build -w packages/loader-yaml && npm run build -w packages/testing && npm run build -w packages/hateoas && npm run build -w packages/devtools && npm run build -w packages/rulewrite",
     "clean": "npm run clean -ws --if-present && rm -rf packages/*/dist packages/*/*.tsbuildinfo",
     "test": "vitest run",
     "test:watch": "vitest",

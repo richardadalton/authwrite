@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { createAuthEngine } from '@authwrite/core'
-import { decisionRecorder } from '@authwrite/testing'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { decisionRecorder } from '@daltonr/authwrite-testing'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
 
 // ─── Test domain types ────────────────────────────────────────────────────────
 

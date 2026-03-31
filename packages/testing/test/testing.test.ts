@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { decisionRecorder, coverageReport } from '@authwrite/testing'
-import type { AuthEngine, Decision, DecisionEvent, PolicyDefinition } from '@authwrite/core'
+import { decisionRecorder, coverageReport } from '@daltonr/authwrite-testing'
+import type { AuthEngine, Decision, DecisionEvent, PolicyDefinition } from '@daltonr/authwrite-core'
 
 // ─── Test fixtures ────────────────────────────────────────────────────────────
 

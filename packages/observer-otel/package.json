@@ -1,5 +1,5 @@
 {
-  "name": "@authwrite/observer-otel",
+  "name": "@daltonr/authwrite-observer-otel",
   "version": "0.1.0",
   "type": "module",
   "license": "MIT",
@@ -26,7 +26,7 @@
     "prepublishOnly": "test -d dist && echo 'dist already built, skipping' || (npm run clean && npm run build)"
   },
   "dependencies": {
-    "@authwrite/core": "*"
+    "@daltonr/authwrite-core": "*"
   },
   "peerDependencies": {
     "@opentelemetry/api": ">=1.0.0"

@@ -109,8 +109,8 @@ Use `condition` for runtime state checks where the rule is conceptually relevant
 A common enterprise requirement: a compliance or security team needs to be able to instantly block all write operations across the entire system, overriding everything else, until they lift the freeze. Priority makes this clean.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import type { PolicyDefinition } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { PolicyDefinition } from '@daltonr/authwrite-core'
 
 // This flag would be read from a feature flag service, config store, or environment variable
 let emergencyFreezeActive = false
@@ -175,7 +175,7 @@ The `Decision` object makes priority behaviour directly observable in tests. You
 
 ```typescript
 import { describe, it, expect } from 'vitest'
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 import { documentPolicy } from '../src/policies/document-policy'
 
 const engine = createAuthEngine({ policy: documentPolicy })

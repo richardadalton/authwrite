@@ -19,6 +19,7 @@ This guide covers everything you need to build with Authwrite, from understandin
 | 11 | [HATEOAS](11-hateoas.md) | How to build permission-aware hypermedia links using `buildLinks`, `embedLinks`, and `linksFromDecisions`. |
 | 12 | [Policy Resolvers](12-policy-resolver.md) | How `PolicyResolver` supports static policies, dynamic resolver functions, and composition strategies (`intersect`, `union`, `firstMatch`). Includes `fromLoader` and `evaluatePolicy`. |
 | 13 | [Authorization Anti-Patterns](13-anti-patterns.md) | Thirteen common authorization mistakes — with bad code examples, explanations of why each fails, and the Authwrite fix. |
+| 14 | [Composable Rules with rulewrite](14-rulewrite.md) | How to build rules from composable predicates using `@daltonr/rulewrite`, wire them into a policy with `fromRule()`, and read the structured match trace from `Decision.matchExplanation`. |
 
 ---
 

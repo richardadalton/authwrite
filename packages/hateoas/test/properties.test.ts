@@ -1,9 +1,9 @@
 import { describe, it } from 'vitest'
 import * as fc from 'fast-check'
-import { buildLinks, linksFromDecisions } from '@authwrite/hateoas'
-import { createAuthEngine } from '@authwrite/core'
-import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
-import type { LinkTemplate } from '@authwrite/hateoas'
+import { buildLinks, linksFromDecisions } from '@daltonr/authwrite-hateoas'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import type { PolicyDefinition, Subject, Resource } from '@daltonr/authwrite-core'
+import type { LinkTemplate } from '@daltonr/authwrite-hateoas'
 
 // ─── Arbitraries ──────────────────────────────────────────────────────────────
 

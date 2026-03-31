@@ -9,7 +9,7 @@ An untested deny rule is a silent security hole. It might never fire, or it migh
 The `AuthEngine` is pure TypeScript. It takes a `PolicyDefinition` and returns decisions. There is no reason to mock it, and no reason to spin up a server to test it. Construct an engine in your test file, call `evaluate()`, and assert on the result.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 import { describe, it, expect } from 'vitest'
 import { documentPolicy } from './fixtures/document-policy'
 
@@ -119,11 +119,11 @@ describe('priority: archived-blocks-mutation overrides owner-full-access', () =>
 
 ## Using decisionRecorder
 
-The `decisionRecorder` from `@authwrite/testing` is an `AuthObserver` that stores every `DecisionEvent` it receives. Pass it in the engine config and inspect the captured events afterward.
+The `decisionRecorder` from `@daltonr/authwrite-testing` is an `AuthObserver` that stores every `DecisionEvent` it receives. Pass it in the engine config and inspect the captured events afterward.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
-import { decisionRecorder } from '@authwrite/testing'
+import { createAuthEngine } from '@daltonr/authwrite-core'
+import { decisionRecorder } from '@daltonr/authwrite-testing'
 
 describe('document policy — recorded decisions', () => {
   it('captures decisions with correct metadata', async () => {
@@ -153,7 +153,7 @@ describe('document policy — recorded decisions', () => {
 `coverageReport` takes an engine and a list of `DecisionEvent` objects and tells you which rules were exercised and which were not.
 
 ```typescript
-import { coverageReport } from '@authwrite/testing'
+import { coverageReport } from '@daltonr/authwrite-testing'
 
 describe('policy coverage', () => {
   it('every rule fires at least once across the test suite', async () => {
@@ -271,10 +271,10 @@ describe('lockdown mode', () => {
 
 ## Testing dry-run with evaluatePolicy
 
-Use `evaluatePolicy` from `@authwrite/core` to test individual rules in complete isolation — no engine, no observers, no mode. This is useful for unit-testing a single rule's `match` logic.
+Use `evaluatePolicy` from `@daltonr/authwrite-core` to test individual rules in complete isolation — no engine, no observers, no mode. This is useful for unit-testing a single rule's `match` logic.
 
 ```typescript
-import { evaluatePolicy } from '@authwrite/core'
+import { evaluatePolicy } from '@daltonr/authwrite-core'
 
 describe('archived-blocks-mutation rule', () => {
   const policy = {

@@ -473,8 +473,8 @@ const engine = createAuthEngine({
 In development, decisions stream to the browser sidebar in real time: subject, resource, action,
 outcome, policy rule, duration. In production, swap `devtools.observer` for (or add alongside):
 
-- `@authwrite/observer-pg` — writes to a Postgres audit log table
-- `@authwrite/observer-otel` — emits OpenTelemetry spans
+- `@daltonr/authwrite-observer-pg` — writes to a Postgres audit log table
+- `@daltonr/authwrite-observer-otel` — emits OpenTelemetry spans
 - A custom observer that publishes to your event stream
 
 The observer pattern means audit coverage is guaranteed at the engine level — individual route

@@ -24,7 +24,7 @@ The archived-document rule sits at a higher priority than the owner rule, so arc
 ## Step 1 — Install
 
 ```bash
-npm install @authwrite/core
+npm install @daltonr/authwrite-core
 ```
 
 ---
@@ -34,7 +34,7 @@ npm install @authwrite/core
 Authwrite is fully generic. Extend `Subject` and `Resource` with your own fields so rule predicates are type-safe throughout.
 
 ```typescript
-import type { Subject, Resource } from '@authwrite/core'
+import type { Subject, Resource } from '@daltonr/authwrite-core'
 
 export interface User extends Subject {
   id: string
@@ -64,7 +64,7 @@ A few things to notice:
 ## Step 3 — Write the policy
 
 ```typescript
-import { type PolicyDefinition } from '@authwrite/core'
+import { type PolicyDefinition } from '@daltonr/authwrite-core'
 import type { User, Document } from './types'
 
 export const documentPolicy: PolicyDefinition<User, Document> = {
@@ -122,7 +122,7 @@ A few things to notice:
 Create the engine and start making checks.
 
 ```typescript
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine } from '@daltonr/authwrite-core'
 import { documentPolicy } from './policy'
 import type { User, Document } from './types'
 
@@ -204,7 +204,7 @@ A few things to notice:
 Attach an observer to receive every decision after it is evaluated. Observers do not affect the outcome.
 
 ```typescript
-import { createAuthEngine, type AuthObserver } from '@authwrite/core'
+import { createAuthEngine, type AuthObserver } from '@daltonr/authwrite-core'
 import { documentPolicy } from './policy'
 
 const auditObserver: AuthObserver = {
@@ -238,7 +238,7 @@ A few things to notice:
 
 - `observers` is an array — you can attach multiple observers (audit log, metrics, tracing) without coupling them to each other.
 - `onDecision` may return a `Promise`. The engine awaits it before resolving the `evaluate` call, so async writes to a database or external log sink are safe.
-- In production, replace `console.log` with a structured logger or use `@authwrite/observer-otel` to emit OpenTelemetry spans directly.
+- In production, replace `console.log` with a structured logger or use `@daltonr/authwrite-observer-otel` to emit OpenTelemetry spans directly.
 
 ---
 
@@ -262,7 +262,7 @@ console.log(decisions['archive'].allowed) // false — no rule covers 'archive' 
 
 ## What's next
 
-- **Developer guide** — covers rule priority in depth, field filtering with `evaluateRead`, the `Enforcer` and its three modes, hot-reloading policies at runtime, and writing policy tests with `@authwrite/testing`.
+- **Developer guide** — covers rule priority in depth, field filtering with `evaluateRead`, the `Enforcer` and its three modes, hot-reloading policies at runtime, and writing policy tests with `@daltonr/authwrite-testing`.
 - **Reference** — full type definitions and API surface for every package.
 
 ---

@@ -1,4 +1,4 @@
-import type { AuthObserver, DecisionEvent, Decision } from '@authwrite/core'
+import type { AuthObserver, DecisionEvent, Decision } from '@daltonr/authwrite-core'
 
 // ─── Serialisable snapshot sent to the browser ───────────────────────────────
 
@@ -22,7 +22,10 @@ export interface PersistedDecision {
    *  'suspended'  — suspended mode denied despite a policy allow (policy still evaluated).
    *  'lockdown'   — lockdown mode denied without evaluating the policy at all.
    */
-  override?:   'permissive' | 'suspended' | 'lockdown'
+  override?:        'permissive' | 'suspended' | 'lockdown'
+  /** Structured trace from the deciding rule's explain() function.
+   *  Present when using @daltonr/authwrite-rulewrite's fromRule(). */
+  matchExplanation?: unknown
 }
 
 // ─── Flag record written to .authwrite-flags.json ────────────────────────────
@@ -91,8 +94,9 @@ function toPersistedDecision(d: Decision): PersistedDecision {
     effect:     d.effect,
     allowed:    d.allowed,
     reason:     d.reason,
-    defaulted:  d.defaulted ?? false,
-    durationMs: d.durationMs,
-    override:   d.override,
+    defaulted:        d.defaulted ?? false,
+    durationMs:       d.durationMs,
+    override:         d.override,
+    matchExplanation: d.matchExplanation,
   }
 }
