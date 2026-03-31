@@ -10,6 +10,8 @@
     "@daltonr/authwrite-core":     "*",
     "@daltonr/authwrite-express":  "*",
     "@daltonr/authwrite-devtools": "*",
+    "@daltonr/authwrite-rulewrite": "*",
+    "@daltonr/rulewrite":          "^0.1.0",
     "express":             "^5.0.0"
   },
   "devDependencies": {
