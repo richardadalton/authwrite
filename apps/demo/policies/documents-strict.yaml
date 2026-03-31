@@ -1,0 +1,15 @@
+# Strict policy — only admins and document owners can act
+id: documents
+version: "2.0.0-strict"
+defaultEffect: deny
+rules:
+  - id: archived-blocks-mutation
+    priority: 20
+    # archived documents: block all writes
+  - id: admin-full-access
+    priority: 10
+    # admins can do anything
+  - id: owner-full-access
+    priority: 5
+    # owners have full access to their own docs
+  # editors and viewers have NO access in this variant

@@ -129,7 +129,8 @@ Because `buildLinks` and `embedLinks` delegate to whatever `AuthEvaluator` they 
 
 - **`enforce` mode** (default): links reflect real policy decisions.
 - **`audit` mode**: all decisions are overridden to `allowed: true` — all links are returned. Useful during rollout to see what links would be visible without blocking users.
-- **`lockdown` mode**: all decisions are overridden to `allowed: false` — no action links are returned. Useful during incidents.
+- **`suspended` mode**: all decisions are overridden to `allowed: false` (policy still evaluates) — no action links are returned.
+- **`lockdown` mode**: engine bypassed entirely — no action links returned, no observers fired. Useful during incidents.
 
 ```typescript
 import { createEnforcer } from '@authwrite/core'

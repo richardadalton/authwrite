@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { createFileLoader } from '@authwrite/loader-yaml'
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine, fromLoader } from '@authwrite/core'
 import { writeFileSync, rmSync, mkdtempSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -442,6 +442,56 @@ rules: []
     await reloaded
 
     // Now allowed after reload
+    expect(await engine.can(user(), doc(), 'read')).toBe(true)
+  })
+})
+
+// ─── fromLoader integration ───────────────────────────────────────────────────
+
+describe('fromLoader with createFileLoader', () => {
+  it('creates a working engine from a YAML file', async () => {
+    const path = writeTmp('loader-init.yaml', `
+id: documents
+defaultEffect: deny
+rules:
+  - id: owner-full-access
+    allow: ['*']
+`)
+    const loader = createFileLoader<User, Doc>({ path, rules: baseRegistry })
+    const engine = createAuthEngine({ policy: await fromLoader(loader) })
+
+    expect(await engine.can(user({ id: 'u1' }), doc({ ownerId: 'u1' }), 'read')).toBe(true)
+    expect(await engine.can(user({ id: 'u1' }), doc({ ownerId: 'u2' }), 'read')).toBe(false)
+  })
+
+  it('file changes propagate to engine via watch callback', async () => {
+    const path = writeTmp('loader-watch.yaml', `
+id: documents
+defaultEffect: deny
+rules: []
+`)
+    const loader = createFileLoader<User, Doc>({ path, rules: baseRegistry })
+
+    let resolveReloaded!: () => void
+    const reloaded = new Promise<void>(r => { resolveReloaded = r })
+
+    const engine = createAuthEngine({
+      policy: await fromLoader(loader, () => resolveReloaded()),
+    })
+
+    expect(await engine.can(user(), doc(), 'read')).toBe(false)
+
+    setTimeout(() => {
+      writeFileSync(path, `id: documents\ndefaultEffect: allow\nrules: []\n`)
+    }, 50)
+
+    await Promise.race([
+      reloaded,
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('reload not triggered')), 3000)
+      ),
+    ])
+
     expect(await engine.can(user(), doc(), 'read')).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createAuthEngine } from '@authwrite/core'
+import { createAuthEngine, fromLoader, evaluatePolicy, intersect, union, firstMatch } from '@authwrite/core'
 import { decisionRecorder } from '@authwrite/testing'
 import type {
   AuthContext,
@@ -53,13 +53,77 @@ const allowAll: PolicyDefinition<User, Doc> = {
 // ─── 1. Setup ─────────────────────────────────────────────────────────────────
 
 describe('createAuthEngine', () => {
-  it('throws when neither policy nor loader is provided', () => {
-    expect(() => createAuthEngine({})).toThrow()
+  it('throws when policy is missing', () => {
+    expect(() => (createAuthEngine as (c: object) => unknown)({})).toThrow()
   })
 
-  it('getPolicy() returns the provided policy', () => {
+  it('getPolicy() returns the provided static policy', () => {
     const engine = createAuthEngine({ policy: denyAll })
     expect(engine.getPolicy()).toBe(denyAll)
+  })
+})
+
+// ─── fromLoader ───────────────────────────────────────────────────────────────
+
+describe('fromLoader', () => {
+  function makeLoader(policy: PolicyDefinition<User, Doc>, watchable = false) {
+    const watchCallbacks: Array<(p: PolicyDefinition<User, Doc>) => void> = []
+    return {
+      loader: {
+        load: vi.fn().mockResolvedValue(policy),
+        ...(watchable ? {
+          watch: vi.fn((cb: (p: PolicyDefinition<User, Doc>) => void) => {
+            watchCallbacks.push(cb)
+          }),
+        } : {}),
+      },
+      trigger: (p: PolicyDefinition<User, Doc>) => watchCallbacks.forEach(cb => cb(p)),
+    }
+  }
+
+  it('returns a Promise that resolves to a resolver function', async () => {
+    const { loader } = makeLoader(denyAll)
+    const resolver = await fromLoader(loader)
+    expect(typeof resolver).toBe('function')
+  })
+
+  it('engine using fromLoader can evaluate', async () => {
+    const { loader } = makeLoader(allowAll)
+    const engine = createAuthEngine({ policy: await fromLoader(loader) })
+
+    expect(await engine.can(user(), doc(), 'read')).toBe(true)
+  })
+
+  it('calls loader.load() exactly once during initialisation', async () => {
+    const { loader } = makeLoader(denyAll)
+    await fromLoader(loader)
+
+    expect(loader.load).toHaveBeenCalledTimes(1)
+  })
+
+  it('auto-wires loader.watch — policy updates propagate to engine', async () => {
+    const { loader, trigger } = makeLoader(denyAll, true)
+    const engine = createAuthEngine({ policy: await fromLoader(loader) })
+
+    expect(await engine.can(user(), doc(), 'read')).toBe(false)
+    trigger(allowAll)
+    expect(await engine.can(user(), doc(), 'read')).toBe(true)
+  })
+
+  it('does not fail when loader has no watch method', async () => {
+    const { loader } = makeLoader(allowAll, false)
+    const engine = createAuthEngine({ policy: await fromLoader(loader) })
+
+    expect(await engine.can(user(), doc(), 'read')).toBe(true)
+  })
+
+  it('calls onReload callback when watcher fires', async () => {
+    const onReload = vi.fn()
+    const { loader, trigger } = makeLoader(denyAll, true)
+    await fromLoader(loader, onReload)
+
+    trigger(allowAll)
+    expect(onReload).toHaveBeenCalledWith(allowAll)
   })
 })
 
@@ -680,29 +744,77 @@ describe('document access policy', () => {
 })
 
 // ─── 11. evaluateAll ──────────────────────────────────────────────────────────
+//
+// evaluateAll(subject, resources[], action) — one action against many resources.
+// Returns paired { resource, decision } results so callers never index-match
+// parallel arrays.
 
 describe('evaluateAll', () => {
-  it('returns a decision for each action', async () => {
+  it('returns a paired result for each resource', async () => {
     const policy: PolicyDefinition<User, Doc> = {
       id: 'p',
       defaultEffect: 'deny',
       rules: [
-        { id: 'owner-full-access', match: ({ subject, resource }) => resource?.ownerId === subject.id, allow: ['*'] },
+        { id: 'owner-read', match: ({ subject, resource }) => resource?.ownerId === subject.id, allow: ['read'] },
+      ],
+    }
+    const engine  = createAuthEngine({ policy })
+    const docs    = [ownedDoc(), someoneElsesDoc()]
+    const results = await engine.evaluateAll(user(), docs, 'read')
+
+    expect(results).toHaveLength(2)
+    expect(results[0]!.resource).toBe(docs[0])
+    expect(results[0]!.decision.allowed).toBe(true)
+    expect(results[1]!.resource).toBe(docs[1])
+    expect(results[1]!.decision.allowed).toBe(false)
+  })
+
+  it('filters a list to accessible resources via .filter()', async () => {
+    const policy: PolicyDefinition<User, Doc> = {
+      id: 'p',
+      defaultEffect: 'deny',
+      rules: [
+        { id: 'published', match: ({ resource }) => resource?.status === 'published', allow: ['read'] },
       ],
     }
     const engine = createAuthEngine({ policy })
-    const results = await engine.evaluateAll({
-      subject: user(),
-      resource: ownedDoc(),
-      actions: ['read', 'write', 'delete'],
-    })
+    const docs   = [
+      doc({ status: 'published' }),
+      doc({ status: 'draft'     }),
+      doc({ status: 'published' }),
+    ]
+    const results = await engine.evaluateAll(user(), docs, 'read')
+    const visible = results.filter(r => r.decision.allowed).map(r => r.resource)
 
-    expect(results['read'].allowed).toBe(true)
-    expect(results['write'].allowed).toBe(true)
-    expect(results['delete'].allowed).toBe(true)
+    expect(visible).toHaveLength(2)
+    expect(visible[0]!.status).toBe('published')
+    expect(visible[1]!.status).toBe('published')
   })
 
-  it('evaluates each action independently', async () => {
+  it('fires observers once per resource', async () => {
+    const recorder = decisionRecorder()
+    const engine   = createAuthEngine({ policy: denyAll, observers: [recorder] })
+    const docs     = [doc(), doc(), doc()]
+
+    await engine.evaluateAll(user(), docs, 'read')
+
+    expect(recorder.all()).toHaveLength(3)
+  })
+
+  it('returns an empty array for an empty resource list', async () => {
+    const engine  = createAuthEngine({ policy: denyAll })
+    const results = await engine.evaluateAll(user(), [], 'read')
+    expect(results).toHaveLength(0)
+  })
+})
+
+// ─── 11b. permissions ─────────────────────────────────────────────────────────
+//
+// permissions(subject, resource, actions[]) — many actions for one resource.
+// Does NOT fire observers — designed for UI rendering, not enforcement.
+
+describe('permissions', () => {
+  it('returns a boolean map keyed by action', async () => {
     const policy: PolicyDefinition<User, Doc> = {
       id: 'p',
       defaultEffect: 'deny',
@@ -711,44 +823,48 @@ describe('evaluateAll', () => {
       ],
     }
     const engine = createAuthEngine({ policy })
-    const results = await engine.evaluateAll({
-      subject: user(),
-      resource: doc(),
-      actions: ['read', 'write'],
-    })
+    const perms  = await engine.permissions(user(), doc(), ['read', 'write', 'delete'])
 
-    expect(results['read'].allowed).toBe(true)
-    expect(results['write'].allowed).toBe(false)
+    expect(perms.read).toBe(true)
+    expect(perms.write).toBe(false)
+    expect(perms.delete).toBe(false)
   })
 
-  it('fires observers once per action', async () => {
+  it('does not fire observers', async () => {
     const recorder = decisionRecorder()
-    const engine = createAuthEngine({ policy: denyAll, observers: [recorder] })
+    const engine   = createAuthEngine({ policy: allowAll, observers: [recorder] })
 
-    await engine.evaluateAll({
-      subject: user(),
-      resource: doc(),
-      actions: ['read', 'write', 'delete'],
-    })
+    await engine.permissions(user(), doc(), ['read', 'write', 'delete'])
 
-    expect(recorder.all()).toHaveLength(3)
+    expect(recorder.all()).toHaveLength(0)
   })
 
-  it('works without a resource for subject actions', async () => {
+  it('works with undefined resource for subject-level actions', async () => {
     const policy: PolicyDefinition<User, Doc> = {
       id: 'p',
       defaultEffect: 'deny',
       rules: [
-        { id: 'can-change-password', match: ({ resource }) => resource === undefined, allow: ['change-password'] },
+        { id: 'change-password', match: ({ resource }) => resource === undefined, allow: ['change-password'] },
       ],
     }
     const engine = createAuthEngine({ policy })
-    const results = await engine.evaluateAll({
-      subject: user(),
-      actions: ['change-password'],
-    })
+    const perms  = await engine.permissions(user(), ['change-password'])
 
-    expect(results['change-password'].allowed).toBe(true)
+    expect(perms['change-password']).toBe(true)
+  })
+
+  it('returns false for all actions on evaluation error (safe default)', async () => {
+    const policy: PolicyDefinition<User, Doc> = {
+      id: 'p',
+      defaultEffect: 'deny',
+      rules: [
+        { id: 'boom', match: () => { throw new Error('oops') }, allow: ['read'] },
+      ],
+    }
+    const engine = createAuthEngine({ policy })
+    const perms  = await engine.permissions(user(), doc(), ['read'])
+
+    expect(perms.read).toBe(false)
   })
 })
 
@@ -909,14 +1025,14 @@ describe('can()', () => {
     expect(await engine.can(user(), doc(), 'read')).toBe(false)
   })
 
-  it('accepts undefined resource for subject actions', async () => {
+  it('subject-only overload — no resource argument', async () => {
     const policy: PolicyDefinition<User, Doc> = {
       id: 'p',
       defaultEffect: 'deny',
       rules: [{ id: 'anyone', match: () => true, allow: ['change-password'] }],
     }
     const engine = createAuthEngine({ policy })
-    expect(await engine.can(user(), undefined, 'change-password')).toBe(true)
+    expect(await engine.can(user(), 'change-password')).toBe(true)
   })
 })
 
@@ -1063,5 +1179,337 @@ describe('reload()', () => {
     const engine = createAuthEngine({ policy: denyAll })
     engine.reload(allowAll)
     expect(engine.getPolicy()).toBe(allowAll)
+  })
+})
+
+// ─── 17. evaluatePolicy() ────────────────────────────────────────────────────
+//
+// Pure function — no engine, no observers, no mode. Used for dry-run checks
+// and unit-testing individual rules in isolation.
+
+describe('evaluatePolicy()', () => {
+  const ownerRead: PolicyDefinition<User, Doc> = {
+    id: 'owner-read',
+    version: '1.0.0',
+    defaultEffect: 'deny',
+    rules: [
+      {
+        id: 'owner-can-read',
+        match: ({ subject, resource }) => resource?.ownerId === subject.id,
+        allow: ['read'],
+      },
+    ],
+  }
+
+  it('returns an allow decision when a rule matches', () => {
+    const d = evaluatePolicy(ownerRead, {
+      subject: user(),
+      resource: ownedDoc(),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(true)
+    expect(d.reason).toBe('owner-can-read')
+  })
+
+  it('returns a deny decision when no rule matches', () => {
+    const d = evaluatePolicy(ownerRead, {
+      subject: user(),
+      resource: someoneElsesDoc(),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(false)
+    expect(d.defaulted).toBe(true)
+    expect(d.reason).toBe('default')
+  })
+
+  it('sets the policy label from id and version', () => {
+    const d = evaluatePolicy(ownerRead, { subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(d.policy).toBe('owner-read@1.0.0')
+  })
+
+  it('throws when a rule function throws — no error swallowing', () => {
+    const broken: PolicyDefinition<User, Doc> = {
+      id: 'broken',
+      defaultEffect: 'deny',
+      rules: [{ id: 'boom', match: () => { throw new Error('rule error') }, allow: ['read'] }],
+    }
+    expect(() => evaluatePolicy(broken, { subject: user(), resource: doc(), action: 'read' }))
+      .toThrow('rule error')
+  })
+
+  it('does not fire observers', () => {
+    const recorder = decisionRecorder()
+    const engine = createAuthEngine({ policy: ownerRead, observers: [recorder] })
+    // evaluatePolicy is called directly — no engine involvement
+    evaluatePolicy(ownerRead, { subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(recorder.all()).toHaveLength(0)
+  })
+
+  it('is not affected by engine mode', async () => {
+    const engine = createAuthEngine({ policy: ownerRead, mode: 'suspended' })
+    // engine.evaluate in suspended mode would deny an allow
+    const engineDecision = await engine.evaluate({ subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(engineDecision.allowed).toBe(false)
+    expect(engineDecision.override).toBe('suspended')
+
+    // evaluatePolicy returns the raw policy result regardless
+    const rawDecision = evaluatePolicy(ownerRead, { subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(rawDecision.allowed).toBe(true)
+    expect(rawDecision.override).toBeUndefined()
+  })
+})
+
+// ─── 18. Dynamic resolver function ───────────────────────────────────────────
+//
+// A PolicyResolverFn is called on every evaluation. Different contexts can
+// produce different policies — e.g. per-tenant policies, feature-flag-gated
+// rules, or resource-type-specific policies.
+
+describe('dynamic resolver function', () => {
+  it('resolver is called on each evaluation', async () => {
+    const resolver = vi.fn().mockReturnValue(denyAll)
+    const engine = createAuthEngine({ policy: resolver })
+
+    await engine.evaluate({ subject: user(), resource: doc(), action: 'read' })
+    await engine.evaluate({ subject: user(), resource: doc(), action: 'write' })
+
+    expect(resolver).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolver receives the evaluation context', async () => {
+    const resolver = vi.fn().mockReturnValue(denyAll)
+    const engine = createAuthEngine({ policy: resolver })
+    const ctx = { subject: user(), resource: doc(), action: 'read' }
+
+    await engine.evaluate(ctx)
+
+    expect(resolver).toHaveBeenCalledWith(ctx)
+  })
+
+  it('can return different policies based on context', async () => {
+    const resolver = (ctx: AuthContext<User, Doc>) =>
+      ctx.subject.roles.includes('admin') ? allowAll : denyAll
+
+    const engine = createAuthEngine({ policy: resolver })
+
+    const adminResult = await engine.evaluate({ subject: user({ roles: ['admin'] }), action: 'read' })
+    const guestResult = await engine.evaluate({ subject: user(), action: 'read' })
+
+    expect(adminResult.allowed).toBe(true)
+    expect(guestResult.allowed).toBe(false)
+  })
+
+  it('supports async resolver functions', async () => {
+    const resolver = async () => {
+      await new Promise(r => setTimeout(r, 0))
+      return allowAll
+    }
+    const engine = createAuthEngine({ policy: resolver })
+    const d = await engine.evaluate({ subject: user(), resource: doc(), action: 'read' })
+    expect(d.allowed).toBe(true)
+  })
+
+  it('getPolicy() returns undefined before any evaluation', () => {
+    const engine = createAuthEngine({ policy: () => allowAll })
+    expect(engine.getPolicy()).toBeUndefined()
+  })
+
+  it('getPolicy() returns the last resolved policy after evaluation', async () => {
+    const engine = createAuthEngine({ policy: () => allowAll })
+    await engine.evaluate({ subject: user(), resource: doc(), action: 'read' })
+    expect(engine.getPolicy()).toBe(allowAll)
+  })
+})
+
+// ─── 19. intersect() ─────────────────────────────────────────────────────────
+//
+// Allow only when ALL child resolvers allow.
+// The first deny encountered wins; its reason is propagated.
+
+describe('intersect()', () => {
+  const ownerOnly: PolicyDefinition<User, Doc> = {
+    id: 'owner-only',
+    defaultEffect: 'deny',
+    rules: [
+      { id: 'owner-allow', match: ({ subject, resource }) => resource?.ownerId === subject.id, allow: ['*'] },
+    ],
+  }
+
+  const publishedOnly: PolicyDefinition<User, Doc> = {
+    id: 'published-only',
+    defaultEffect: 'deny',
+    rules: [
+      { id: 'published-allow', match: ({ resource }) => resource?.status === 'published', allow: ['read'] },
+    ],
+  }
+
+  it('allows when all child policies allow', async () => {
+    const engine = createAuthEngine({ policy: intersect(ownerOnly, publishedOnly) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: ownedDoc({ status: 'published' }),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(true)
+  })
+
+  it('denies when the first child policy denies', async () => {
+    const engine = createAuthEngine({ policy: intersect(ownerOnly, publishedOnly) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: someoneElsesDoc({ status: 'published' }),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(false)
+  })
+
+  it('denies when the second child policy denies', async () => {
+    const engine = createAuthEngine({ policy: intersect(ownerOnly, publishedOnly) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: ownedDoc({ status: 'draft' }),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(false)
+    expect(d.reason).toBe('default')
+  })
+
+  it('reason comes from the first denying child', async () => {
+    const engine = createAuthEngine({ policy: intersect(ownerOnly, publishedOnly) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: someoneElsesDoc({ status: 'published' }),
+      action: 'read',
+    })
+    expect(d.reason).toBe('default')  // ownerOnly defaulted (no rule matched)
+  })
+
+  it('policy label identifies all children', async () => {
+    const engine = createAuthEngine({ policy: intersect(ownerOnly, publishedOnly) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: ownedDoc({ status: 'published' }),
+      action: 'read',
+    })
+    expect(d.policy).toBe('intersect(owner-only, published-only)')
+  })
+})
+
+// ─── 20. union() ─────────────────────────────────────────────────────────────
+//
+// Allow when ANY child resolver allows.
+// The first allow encountered wins; its reason is propagated.
+
+describe('union()', () => {
+  const ownerOnly: PolicyDefinition<User, Doc> = {
+    id: 'owner-only',
+    defaultEffect: 'deny',
+    rules: [
+      { id: 'owner-allow', match: ({ subject, resource }) => resource?.ownerId === subject.id, allow: ['*'] },
+    ],
+  }
+
+  const adminOnly: PolicyDefinition<User, Doc> = {
+    id: 'admin-only',
+    defaultEffect: 'deny',
+    rules: [
+      { id: 'admin-allow', match: ({ subject }) => subject.roles.includes('admin'), allow: ['*'] },
+    ],
+  }
+
+  it('allows when the first child policy allows', async () => {
+    const engine = createAuthEngine({ policy: union(ownerOnly, adminOnly) })
+    const d = await engine.evaluate({ subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(d.allowed).toBe(true)
+    expect(d.reason).toBe('owner-allow')
+  })
+
+  it('allows when the second child policy allows', async () => {
+    const engine = createAuthEngine({ policy: union(ownerOnly, adminOnly) })
+    const d = await engine.evaluate({
+      subject: user({ roles: ['admin'] }),
+      resource: someoneElsesDoc(),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(true)
+    expect(d.reason).toBe('admin-allow')
+  })
+
+  it('denies when all child policies deny', async () => {
+    const engine = createAuthEngine({ policy: union(ownerOnly, adminOnly) })
+    const d = await engine.evaluate({ subject: user(), resource: someoneElsesDoc(), action: 'read' })
+    expect(d.allowed).toBe(false)
+    expect(d.reason).toBe('union-all-denied')
+  })
+
+  it('policy label identifies all children', async () => {
+    const engine = createAuthEngine({ policy: union(ownerOnly, adminOnly) })
+    const d = await engine.evaluate({ subject: user(), resource: ownedDoc(), action: 'read' })
+    expect(d.policy).toBe('union(owner-only, admin-only)')
+  })
+})
+
+// ─── 21. firstMatch() ────────────────────────────────────────────────────────
+//
+// Use the first resolver with a non-default (matched) decision.
+// Falls through when a policy's defaultEffect would apply. Last resolver is
+// the unconditional fallback.
+
+describe('firstMatch()', () => {
+  const specialCase: PolicyDefinition<User, Doc> = {
+    id: 'special-case',
+    defaultEffect: 'deny',
+    rules: [
+      {
+        id: 'confidential-deny',
+        match: ({ resource }) => resource?.sensitivity === 'confidential',
+        deny: ['read'],
+      },
+    ],
+  }
+
+  const general: PolicyDefinition<User, Doc> = {
+    id: 'general',
+    defaultEffect: 'allow',
+    rules: [],
+  }
+
+  it('uses the first resolver when it has a matching rule', async () => {
+    const engine = createAuthEngine({ policy: firstMatch(specialCase, general) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: doc({ sensitivity: 'confidential' }),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(false)
+    expect(d.reason).toBe('confidential-deny')
+  })
+
+  it('falls through to next resolver when first policy defaults', async () => {
+    const engine = createAuthEngine({ policy: firstMatch(specialCase, general) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: doc({ sensitivity: 'public' }),
+      action: 'read',
+    })
+    // specialCase has no matching rule → falls to general (defaultEffect: allow)
+    expect(d.allowed).toBe(true)
+  })
+
+  it('last resolver is always the fallback', async () => {
+    const denyFallback: PolicyDefinition<User, Doc> = { id: 'deny-fallback', defaultEffect: 'deny', rules: [] }
+    const engine = createAuthEngine({ policy: firstMatch(specialCase, denyFallback) })
+    const d = await engine.evaluate({
+      subject: user(),
+      resource: doc({ sensitivity: 'public' }),
+      action: 'read',
+    })
+    expect(d.allowed).toBe(false)  // fell through to deny-fallback
+  })
+
+  it('policy label identifies all children', async () => {
+    const engine = createAuthEngine({ policy: firstMatch(specialCase, general) })
+    const d = await engine.evaluate({ subject: user(), resource: doc(), action: 'read' })
+    expect(d.policy).toBe('firstMatch(special-case, general)')
   })
 })

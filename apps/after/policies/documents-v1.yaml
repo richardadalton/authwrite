@@ -1,0 +1,21 @@
+# documents-v1.yaml — standard policy (matches the TypeScript policy in policy.ts)
+id: documents
+version: "1.0.0"
+defaultEffect: deny
+rules:
+  - id: sensitive-blocks-non-admin
+    priority: 25
+  - id: archived-blocks-mutation
+    priority: 20
+  - id: admin-full-access
+    priority: 15
+  - id: owner-full-access
+    priority: 10
+  - id: editor-access
+    priority: 5
+  - id: viewer-read-published
+    priority: 1
+  - id: premium-reports
+    priority: 1
+  - id: admin-system-access
+    priority: 1

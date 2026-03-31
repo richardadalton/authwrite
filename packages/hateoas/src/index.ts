@@ -57,17 +57,15 @@ export async function buildLinks<
   S extends Subject = Subject,
   R extends Resource = Resource,
 >(config: BuildLinksConfig<S, R>): Promise<LinkMap> {
-  const actions = Object.keys(config.actions) as Action[]
+  const actionNames = Object.keys(config.actions)
 
-  const decisions = await config.engine.evaluateAll({
-    subject:  config.subject,
-    resource: config.resource,
-    actions,
-  })
+  const permitted = config.resource !== undefined
+    ? await config.engine.permissions(config.subject, config.resource, actionNames)
+    : await config.engine.permissions(config.subject, actionNames)
 
   const links: LinkMap = {}
-  for (const action of actions) {
-    if (decisions[action]?.allowed) {
+  for (const action of actionNames) {
+    if (permitted[action]) {
       links[action] = config.actions[action]
     }
   }
@@ -122,21 +120,21 @@ export async function embedLinks<
 // ─── Decision-based link filtering (sync, from pre-fetched decisions) ─────────
 
 /**
- * Synchronous variant for cases where you have already called `evaluateAll`
+ * Synchronous variant for cases where you have already called `engine.permissions()`
  * and want to build links without an additional async round-trip.
  *
  * ```typescript
- * const decisions = await engine.evaluateAll({ subject, resource, actions })
- * const links = linksFromDecisions(decisions, actionTemplates)
+ * const perms = await engine.permissions(subject, resource, ['read', 'write', 'delete'])
+ * const links = linksFromDecisions(perms, actionTemplates)
  * ```
  */
 export function linksFromDecisions(
-  decisions: Record<string, { allowed: boolean }>,
-  actions:   Record<Action, LinkTemplate>,
+  permissions: Record<string, boolean>,
+  actions:     Record<Action, LinkTemplate>,
 ): LinkMap {
   const links: LinkMap = {}
   for (const [action, template] of Object.entries(actions)) {
-    if (decisions[action]?.allowed) {
+    if (permissions[action]) {
       links[action] = template
     }
   }

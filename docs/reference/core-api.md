@@ -6,95 +6,184 @@ This reference covers `@authwrite/core` — the zero-dependency TypeScript autho
 
 ## `createAuthEngine(config)`
 
+Creates an `AuthEngine`. Always synchronous — pass a `PolicyResolver` (which may be the result of `await fromLoader(...)` if you need async initialisation).
+
 ```typescript
-export function createAuthEngine<S extends Subject = Subject, R extends Resource = Resource>(
-  config: AuthEngineConfig<S, R>
-): AuthEngine<S, R>
+export function createAuthEngine<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+  A extends string = string,
+>(config: AuthEngineConfig<S, R>): AuthEngine<S, R, A>
 ```
 
-Factory function that constructs a fully configured `AuthEngine` instance.
+```typescript
+// Static policy
+const engine = createAuthEngine({ policy })
+
+// Dynamic resolver (async function)
+const engine = createAuthEngine({ policy: async (ctx) => selectPolicy(ctx) })
+
+// File-based with hot reload
+const engine = createAuthEngine({ policy: await fromLoader(loader) })
+
+// Composite policy
+const engine = createAuthEngine({ policy: intersect(basePolicy, tenantPolicy) })
+```
 
 ### `AuthEngineConfig` options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `policy` | `PolicyDefinition<S, R>` | — | Inline policy definition. Mutually exclusive with `loader`. |
-| `loader` | `PolicyLoader<S, R>` | — | Async loader that provides the policy. Mutually exclusive with `policy`. |
+| `policy` | `PolicyResolver<S, R>` | — | **Required.** Static policy, dynamic function, or composite resolver. |
 | `observers` | `AuthObserver[]` | `[]` | Observers notified after every decision. |
-| `onError` | `'deny' \| 'allow'` | `'deny'` | Effect applied when the evaluator throws an unexpected error. |
-
-Either `policy` or `loader` must be provided. Providing neither throws at construction time.
+| `onError` | `'deny' \| 'allow'` | `'deny'` | Effect applied when a rule throws an unexpected error. |
+| `mode` | `EnforcerMode` | `'enforce'` | Initial enforcement mode. |
 
 ---
 
 ## `AuthEngine`
 
 ```typescript
-export interface AuthEngine<S extends Subject = Subject, R extends Resource = Resource>
-  extends AuthEvaluator<S, R> {
+export interface AuthEngine<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+  A extends string = string,
+> extends AuthEvaluator<S, R, A> {
   reload(policy: PolicyDefinition<S, R>): void
-  getPolicy(): PolicyDefinition<S, R>
+  getPolicy(): PolicyDefinition<S, R> | undefined
+  getMode(): EnforcerMode
+  setMode(mode: EnforcerMode): void
 }
 ```
 
-Extends `AuthEvaluator` with policy management methods.
+Extends `AuthEvaluator` with policy and mode management.
 
 ### Methods
 
 | Method | Signature | Description |
 |---|---|---|
-| `evaluate` | `(ctx: AuthContext<S, R>) => Promise<Decision>` | Evaluates a single context against the active policy. |
-| `evaluateAll` | `(input: EvaluateAllInput<S, R>) => Promise<Record<Action, Decision>>` | Evaluates multiple actions in one call, returning a decision per action. |
-| `evaluateRead` | `(input: EvaluateReadInput<S, R>) => Promise<EvaluateReadResult>` | Evaluates read access and returns the set of fields the subject may see. |
-| `can` | `(subject: S, resource: R \| undefined, action: Action) => Promise<boolean>` | Convenience wrapper returning `true` when the decision is allowed. |
-| `reload` | `(policy: PolicyDefinition<S, R>) => void` | Replaces the active policy synchronously and notifies observers via `onPolicyReload`. |
-| `getPolicy` | `() => PolicyDefinition<S, R>` | Returns the currently active `PolicyDefinition`. |
+| `evaluate` | `(ctx: AuthContext<S, R>) => Promise<Decision>` | Evaluates a single context. Fires observers. Applies mode override. |
+| `evaluateAll` | `(subject: S, resources: R[], action: A) => Promise<Array<{ resource: R; decision: Decision }>>` | Evaluates one action against many resources. Fires observers for each. Returns paired results. |
+| `evaluateRead` | `(input: EvaluateReadInput<S, R>) => Promise<EvaluateReadResult>` | Evaluates read access and returns permitted fields. |
+| `permissions` | `(subject: S, actions: K[]) => Promise<Record<K, boolean>>` | Batch-evaluates actions for UI rendering. Does not fire observers. Subject-only overload. |
+| `permissions` | `(subject: S, resource: R, actions: K[]) => Promise<Record<K, boolean>>` | Batch-evaluates actions with a resource. Does not fire observers. |
+| `can` | `(subject: S, action: A) => Promise<boolean>` | Convenience wrapper. Fires observers. Subject-only overload. |
+| `can` | `(subject: S, resource: R, action: A) => Promise<boolean>` | Convenience wrapper with a resource. Fires observers. |
+| `reload` | `(policy: PolicyDefinition<S, R>) => void` | Replaces the active resolver with a static policy. Fires `onPolicyReload` on observers. |
+| `getPolicy` | `() => PolicyDefinition<S, R> \| undefined` | Returns the most recently resolved policy. `undefined` for composite resolvers before first evaluation, or before any evaluation with a dynamic resolver. |
+| `getMode` | `() => EnforcerMode` | Returns the current enforcement mode. |
+| `setMode` | `(mode: EnforcerMode) => void` | Changes the enforcement mode in-flight. Affects all subsequent evaluations. |
 
 ---
 
-## `createEnforcer(engine, config)`
+## `evaluatePolicy(policy, ctx)`
 
 ```typescript
-export function createEnforcer<S extends Subject = Subject, R extends Resource = Resource>(
-  engine: AuthEngine<S, R>,
-  config: { mode: EnforcerMode }
-): Enforcer<S, R>
+export function evaluatePolicy<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+>(
+  policy: PolicyDefinition<S, R>,
+  ctx:    AuthContext<S, R>,
+): Decision
 ```
 
-Wraps an `AuthEngine` with a runtime mode that can override evaluation outcomes.
+Pure policy evaluation — no engine, no observers, no mode override. Evaluates a resolved `PolicyDefinition` against a context and returns a `Decision`. Throws if any rule function throws.
 
-### `EnforcerMode` values
+Use this for:
+- Unit-testing individual rules in isolation
+- Dry-running a policy before installing it
+- Composition helpers (internally)
 
-| Value | Meaning |
-|---|---|
-| `'audit'` | Evaluates normally but never blocks. All decisions report the real outcome but the enforcer does not act on denials. |
-| `'enforce'` | Standard behaviour. Denials are enforced exactly as the policy dictates. |
-| `'lockdown'` | All requests are denied regardless of policy. Decision includes `override: 'lockdown'`. |
+```typescript
+import { evaluatePolicy } from '@authwrite/core'
+
+const decision = evaluatePolicy(myPolicy, {
+  subject:  user,
+  resource: doc,
+  action:   'write',
+})
+```
 
 ---
 
-## `Enforcer`
+## `fromLoader(loader, onReload?)`
 
 ```typescript
-export interface Enforcer<S extends Subject = Subject, R extends Resource = Resource>
-  extends AuthEvaluator<S, R> {
-  readonly mode: EnforcerMode
-  setMode(mode: EnforcerMode): void
-}
+export async function fromLoader<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+>(
+  loader:    PolicyLoader<S, R>,
+  onReload?: (policy: PolicyDefinition<S, R>) => void,
+): Promise<PolicyResolverFn<S, R>>
 ```
 
-Extends `AuthEvaluator` with mode management. Inherits all `AuthEvaluator` methods from the underlying engine.
+Converts a `PolicyLoader` into a `PolicyResolverFn`. Loads the policy eagerly, caches it, and wires the loader's `watch()` callback to update the cache on hot-reload. The returned function is synchronous after initialisation.
 
-### Properties and methods
+```typescript
+const engine = createAuthEngine({
+  policy: await fromLoader(createFileLoader({ path, rules })),
+})
+```
 
-| Member | Type | Description |
-|---|---|---|
-| `mode` | `EnforcerMode` | The current operating mode. Read-only. |
-| `setMode` | `(mode: EnforcerMode) => void` | Updates the operating mode at runtime. |
-| `evaluate` | `(ctx: AuthContext<S, R>) => Promise<Decision>` | Delegates to the engine; outcome may be overridden by the current mode. |
-| `evaluateAll` | `(input: EvaluateAllInput<S, R>) => Promise<Record<Action, Decision>>` | Delegates to the engine with mode override applied to each decision. |
-| `evaluateRead` | `(input: EvaluateReadInput<S, R>) => Promise<EvaluateReadResult>` | Delegates to the engine with mode override applied. |
-| `can` | `(subject: S, resource: R \| undefined, action: Action) => Promise<boolean>` | Returns `true` when the mode-adjusted decision is allowed. |
+Pass an optional `onReload` callback to be notified when the watcher fires:
+
+```typescript
+const policy = await fromLoader(loader, (newPolicy) => {
+  console.log(`Reloaded: ${newPolicy.id}`)
+})
+```
+
+---
+
+## `intersect(...resolvers)`
+
+```typescript
+export function intersect<S, R, A>(
+  ...resolvers: PolicyResolver<S, R, A>[]
+): CompositeResolver<S, R, A>
+```
+
+Returns a `CompositeResolver` that allows only when **all** child resolvers allow. The first denial wins; its `reason` is propagated.
+
+```typescript
+const engine = createAuthEngine({ policy: intersect(basePolicy, tenantPolicy) })
+```
+
+`decision.policy` format: `intersect(base@1.0, tenant@2.0)`
+
+---
+
+## `union(...resolvers)`
+
+```typescript
+export function union<S, R, A>(
+  ...resolvers: PolicyResolver<S, R, A>[]
+): CompositeResolver<S, R, A>
+```
+
+Returns a `CompositeResolver` that allows when **any** child resolver allows. The first allow wins; its `reason` is propagated. If all deny, `reason` is `'union-all-denied'`.
+
+```typescript
+const engine = createAuthEngine({ policy: union(ownerPolicy, adminPolicy) })
+```
+
+---
+
+## `firstMatch(...resolvers)`
+
+```typescript
+export function firstMatch<S, R, A>(
+  ...resolvers: PolicyResolver<S, R, A>[]
+): CompositeResolver<S, R, A>
+```
+
+Returns a `CompositeResolver` that uses the first resolver with a non-default decision (a matched rule). Falls through to the next when a policy's `defaultEffect` would apply. The last resolver is the unconditional fallback.
+
+```typescript
+const engine = createAuthEngine({ policy: firstMatch(specialCase, general) })
+```
 
 ---
 
@@ -104,16 +193,16 @@ Extends `AuthEvaluator` with mode management. Inherits all `AuthEvaluator` metho
 evaluate(ctx: AuthContext<S, R>): Promise<Decision>
 ```
 
-Evaluates a single authorization context and returns a `Decision`.
+Evaluates a single authorization context and returns a `Decision`. Fires observers. Applies mode override.
 
 ### `AuthContext` properties
 
 | Property | Type | Description |
 |---|---|---|
 | `subject` | `S` | The entity requesting access. |
-| `resource` | `R` | (optional) The resource being accessed. |
-| `action` | `Action` | The action being attempted (e.g. `'read'`, `'delete'`). |
-| `env` | `object` | (optional) Ambient request metadata. See `env` fields below. |
+| `resource` | `R` | (optional) The resource being accessed. Absent for subject actions. |
+| `action` | `string` | The action being attempted (e.g. `'read'`, `'delete'`). |
+| `env` | `object` | (optional) Ambient request metadata. |
 
 ### `AuthContext.env` fields
 
@@ -126,24 +215,20 @@ Evaluates a single authorization context and returns a `Decision`.
 
 ---
 
-## `evaluateAll(input)`
+## `evaluateAll(subject, resources, action)`
 
 ```typescript
-evaluateAll(input: EvaluateAllInput<S, R>): Promise<Record<Action, Decision>>
+evaluateAll(subject: S, resources: R[], action: A): Promise<Array<{ resource: R; decision: Decision }>>
 ```
 
-Evaluates multiple actions against the same subject and resource in a single call.
+Evaluates one action against many resources. Fires observers for each decision — use this for list pages where each item needs an individual access decision.
 
-### `EvaluateAllInput` properties
+Returns paired `{ resource, decision }` results so you never need to index-match parallel arrays:
 
-| Property | Type | Description |
-|---|---|---|
-| `subject` | `S` | The entity requesting access. |
-| `resource` | `R` | (optional) The resource being accessed. |
-| `actions` | `Action[]` | List of actions to evaluate. |
-| `env` | `AuthContext['env']` | (optional) Ambient request metadata. |
-
-Returns `Record<Action, Decision>` — a map from each action string to its `Decision`.
+```typescript
+const results = await engine.evaluateAll(user, docs, 'read')
+const visible  = results.filter(r => r.decision.allowed).map(r => r.resource)
+```
 
 ---
 
@@ -153,7 +238,7 @@ Returns `Record<Action, Decision>` — a map from each action string to its `Dec
 evaluateRead(input: EvaluateReadInput<S, R>): Promise<EvaluateReadResult>
 ```
 
-Evaluates read access and resolves field-level visibility for the subject on the given resource.
+Evaluates read access and resolves field-level visibility.
 
 ### `EvaluateReadInput` properties
 
@@ -165,13 +250,53 @@ Evaluates read access and resolves field-level visibility for the subject on the
 
 ---
 
-## `can(subject, resource, action)`
+## `can(subject, action)` / `can(subject, resource, action)`
 
 ```typescript
-can(subject: S, resource: R | undefined, action: Action): Promise<boolean>
+can(subject: S, action: A): Promise<boolean>
+can(subject: S, resource: R, action: A): Promise<boolean>
 ```
 
-Convenience method. Returns `true` when `evaluate()` produces an allowed decision, `false` otherwise. Equivalent to `(await engine.evaluate({ subject, resource, action })).allowed`.
+Convenience method. Returns `true` when the decision is allowed. Fires observers. Equivalent to `(await engine.evaluate({ subject, resource, action })).allowed`.
+
+Subject-only form (no resource):
+
+```typescript
+const canUpload = await engine.can(user, 'uploadFile')
+```
+
+With resource:
+
+```typescript
+const canDelete = await engine.can(user, doc, 'delete')
+```
+
+---
+
+## `permissions(subject, actions)` / `permissions(subject, resource, actions)`
+
+```typescript
+permissions<K extends A>(subject: S, actions: K[]): Promise<Record<K, boolean>>
+permissions<K extends A>(subject: S, resource: R, actions: K[]): Promise<Record<K, boolean>>
+```
+
+Batch-evaluates many actions for one subject. **Does not fire observers** — this is a query for UI rendering, not an enforcement decision.
+
+Subject-only (no resource):
+
+```typescript
+const perms = await engine.permissions(user, ['accessAdmin', 'viewReports'])
+// { accessAdmin: true, viewReports: true }
+```
+
+With resource:
+
+```typescript
+const perms = await engine.permissions(user, doc, ['write', 'archive', 'delete'])
+// { write: true, archive: true, delete: false }
+```
+
+Use `can()` or `evaluate()` when you need an audited enforcement decision.
 
 ---
 
@@ -179,16 +304,53 @@ Convenience method. Returns `true` when `evaluate()` produces an allowed decisio
 
 ```typescript
 export function applyFieldFilter<T extends Record<string, unknown>>(
-  obj: T,
+  obj:           T,
   allowedFields: string[]
 ): Partial<T>
 ```
 
-Returns a shallow copy of `obj` containing only the keys listed in `allowedFields`. Keys not present in `allowedFields` are omitted from the result. Pass the `allowedFields` from an `EvaluateReadResult` to apply field-level access control to a plain object.
+Returns a shallow copy of `obj` containing only the keys listed in `allowedFields`. Pass the `allowedFields` from an `EvaluateReadResult` to apply field-level access control to a plain object.
 
 ---
 
 ## Types reference
+
+### `PolicyResolver`
+
+```typescript
+export type PolicyResolver<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+  A extends string = string,
+> =
+  | PolicyDefinition<S, R, A>
+  | PolicyResolverFn<S, R, A>
+  | CompositeResolver<S, R, A>
+```
+
+The union of all accepted policy forms. Static policy, dynamic function, or composite.
+
+### `PolicyResolverFn`
+
+```typescript
+export type PolicyResolverFn<S, R, A> =
+  (ctx: AuthContext<S, R>) => PolicyDefinition<S, R, A> | Promise<PolicyDefinition<S, R, A>>
+```
+
+A function called on every evaluation. May return synchronously or asynchronously.
+
+### `CompositeResolver`
+
+```typescript
+export interface CompositeResolver<S, R, A> {
+  readonly _tag: 'intersect' | 'union' | 'firstMatch'
+  readonly resolvers: PolicyResolver<S, R, A>[]
+}
+```
+
+Produced by the `intersect`, `union`, and `firstMatch` helpers. Not constructed directly.
+
+---
 
 ### `Subject`
 
@@ -204,7 +366,7 @@ export interface Subject {
 |---|---|---|
 | `id` | `string` | Unique identifier for the subject. |
 | `roles` | `string[]` | List of role strings used in policy matching. |
-| `attributes` | `Record<string, unknown>` | (optional) Arbitrary subject metadata available in rule conditions. |
+| `attributes` | `Record<string, unknown>` | (optional) Arbitrary subject metadata. |
 
 ---
 
@@ -222,9 +384,9 @@ export interface Resource {
 | Property | Type | Description |
 |---|---|---|
 | `type` | `string` | Resource type identifier (e.g. `'document'`, `'project'`). |
-| `id` | `string` | (optional) Instance identifier for the resource. |
+| `id` | `string` | (optional) Instance identifier. Absent for type actions (create). |
 | `ownerId` | `string` | (optional) Subject ID of the resource owner. |
-| `attributes` | `Record<string, unknown>` | (optional) Arbitrary resource metadata available in rule conditions. |
+| `attributes` | `Record<string, unknown>` | (optional) Arbitrary resource metadata. |
 
 ---
 
@@ -247,7 +409,7 @@ export interface Decision {
   evaluatedAt: Date
   durationMs: number
   defaulted?: boolean
-  override?: 'permissive' | 'lockdown'
+  override?: 'permissive' | 'suspended' | 'lockdown'
   error?: Error
 }
 ```
@@ -255,28 +417,47 @@ export interface Decision {
 | Property | Type | Description |
 |---|---|---|
 | `allowed` | `boolean` | `true` when access is granted. |
-| `effect` | `'allow' \| 'deny'` | The final effect applied to this decision. |
-| `reason` | `string` | Human-readable explanation of why the decision was reached. Matches the `id` of the matching rule, or a built-in reason string for defaults and errors. |
-| `rule` | `PolicyRule` | (optional) The specific rule that produced this decision. Absent when the default effect applied or an error occurred. |
-| `policy` | `string` | The `id` of the policy that was evaluated. |
+| `effect` | `'allow' \| 'deny'` | The final effect applied. |
+| `reason` | `string` | The `id` of the matching rule, `'default'` when no rule matched, `'lockdown'` in lockdown mode, or `'error'` when a rule threw. |
+| `rule` | `PolicyRule` | (optional) The rule that produced this decision. Absent on default, error, lockdown, or composite decisions. |
+| `policy` | `string` | `id@version` of the evaluated policy, or composite label (`intersect(...)`) for composites. |
 | `context` | `AuthContext` | The full context passed to the evaluator. |
 | `evaluatedAt` | `Date` | Timestamp when evaluation completed. |
-| `durationMs` | `number` | Wall-clock time taken to evaluate, in milliseconds. |
-| `defaulted` | `boolean` | (optional) `true` when no rule matched and the policy's `defaultEffect` was applied. |
-| `override` | `'permissive' \| 'lockdown'` | (optional) Set when an `Enforcer` mode overrode the policy outcome. |
-| `error` | `Error` | (optional) The error that caused this decision when `onError` produced the outcome. |
+| `durationMs` | `number` | Wall-clock time taken, in milliseconds. |
+| `defaulted` | `boolean` | (optional) `true` when no rule matched and `defaultEffect` was applied. |
+| `override` | `'permissive' \| 'suspended' \| 'lockdown' \| undefined` | Set when the engine mode overrode the policy outcome. |
+| `error` | `Error` | (optional) Present when a rule threw and `onError` determined the outcome. |
+
+---
+
+### `EnforcerMode`
+
+```typescript
+export type EnforcerMode = 'audit' | 'enforce' | 'suspended' | 'lockdown'
+```
+
+| Value | Meaning |
+|---|---|
+| `'audit'` | Evaluates normally. Denials are overridden to allow (`override: 'permissive'`). Observers see the honest decision. |
+| `'enforce'` | Standard behaviour. Policy decision is final. |
+| `'suspended'` | Policy evaluates and observers fire. Allows are overridden to deny (`override: 'suspended'`). |
+| `'lockdown'` | Policy is skipped. Immediate deny. Observers fire with `reason: 'lockdown'`. |
 
 ---
 
 ### `PolicyDefinition`
 
 ```typescript
-export interface PolicyDefinition<S extends Subject = Subject, R extends Resource = Resource> {
+export interface PolicyDefinition<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+  A extends string = string,
+> {
   id: string
   version?: string
   description?: string
   defaultEffect: 'allow' | 'deny'
-  rules: PolicyRule<S, R>[]
+  rules: PolicyRule<S, R, A>[]
   fieldRules?: FieldRule<S, R>[]
 }
 ```
@@ -284,37 +465,41 @@ export interface PolicyDefinition<S extends Subject = Subject, R extends Resourc
 | Property | Type | Description |
 |---|---|---|
 | `id` | `string` | Unique identifier for the policy. |
-| `version` | `string` | (optional) Semantic version or label for audit purposes. |
-| `description` | `string` | (optional) Human-readable description of the policy. |
-| `defaultEffect` | `'allow' \| 'deny'` | Effect applied when no rule matches. Recommended value is `'deny'`. |
-| `rules` | `PolicyRule<S, R>[]` | Ordered list of rules. Rules are evaluated from lowest to highest `priority`. |
-| `fieldRules` | `FieldRule<S, R>[]` | (optional) Field-level visibility rules used by `evaluateRead`. |
+| `version` | `string` | (optional) Semantic version for audit purposes. Appears in `decision.policy` as `id@version`. |
+| `description` | `string` | (optional) Human-readable description. |
+| `defaultEffect` | `'allow' \| 'deny'` | Effect when no rule matches. Use `'deny'` for least-privilege. |
+| `rules` | `PolicyRule<S, R, A>[]` | Rules evaluated for action decisions. |
+| `fieldRules` | `FieldRule<S, R>[]` | (optional) Rules for field-level visibility in `evaluateRead`. |
 
 ---
 
 ### `PolicyRule`
 
 ```typescript
-export interface PolicyRule<S extends Subject = Subject, R extends Resource = Resource> {
+export interface PolicyRule<
+  S extends Subject = Subject,
+  R extends Resource = Resource,
+  A extends string = string,
+> {
   id: string
   description?: string
   priority?: number
   match: (ctx: AuthContext<S, R>) => boolean
-  allow?: Action[]
-  deny?: Action[]
+  allow?: (A | '*')[]
+  deny?: (A | '*')[]
   condition?: (ctx: AuthContext<S, R>) => boolean
 }
 ```
 
 | Property | Type | Description |
 |---|---|---|
-| `id` | `string` | Unique identifier within the policy. Appears as `Decision.reason` when this rule fires. |
-| `description` | `string` | (optional) Human-readable description of the rule's purpose. |
-| `priority` | `number` | (optional) Evaluation order. Lower values are evaluated first. Defaults to `0`. |
-| `match` | `(ctx: AuthContext<S, R>) => boolean` | Predicate that determines whether this rule applies to the given context. |
-| `allow` | `Action[]` | (optional) Actions this rule allows when `match` returns `true`. |
-| `deny` | `Action[]` | (optional) Actions this rule denies when `match` returns `true`. |
-| `condition` | `(ctx: AuthContext<S, R>) => boolean` | (optional) Secondary predicate evaluated after `match`. The rule only fires when both return `true`. |
+| `id` | `string` | Unique identifier. Appears as `Decision.reason` when this rule fires. |
+| `description` | `string` | (optional) Human-readable description. |
+| `priority` | `number` | (optional) Higher number wins. Default `0`. At equal priority, deny beats allow. |
+| `match` | `(ctx) => boolean` | Predicate — returns `true` when this rule is a candidate for this context. |
+| `allow` | `(A \| '*')[]` | (optional) Actions allowed when `match` (and `condition`) pass. `'*'` covers all actions. |
+| `deny` | `(A \| '*')[]` | (optional) Actions denied when `match` (and `condition`) pass. |
+| `condition` | `(ctx) => boolean` | (optional) Secondary predicate evaluated after `match`. Both must return `true` for the rule to fire. |
 
 ---
 
@@ -331,10 +516,10 @@ export interface FieldRule<S extends Subject = Subject, R extends Resource = Res
 
 | Property | Type | Description |
 |---|---|---|
-| `id` | `string` | Unique identifier for the field rule. |
-| `match` | `(ctx: AuthContext<S, R>) => boolean` | Predicate that determines whether this field rule applies to the context. |
-| `expose` | `string[]` | Field names that are visible when this rule matches. |
-| `redact` | `string[]` | Field names that are hidden when this rule matches. Takes precedence over `expose`. |
+| `id` | `string` | Unique identifier. |
+| `match` | `(ctx) => boolean` | Predicate — returns `true` when this field rule applies. |
+| `expose` | `string[]` | Field names visible when this rule matches. `'*'` exposes all fields. |
+| `redact` | `string[]` | Field names hidden when this rule matches. Takes precedence over `expose`. |
 
 ---
 
@@ -350,9 +535,9 @@ export interface AuthObserver {
 
 | Method | Signature | Description |
 |---|---|---|
-| `onDecision` | `(event: DecisionEvent) => void \| Promise<void>` | Called after every evaluation. Required. |
-| `onError` | `(err: Error, ctx: AuthContext) => void` | (optional) Called when an unexpected error is caught during evaluation. |
-| `onPolicyReload` | `(policy: PolicyDefinition) => void` | (optional) Called when `AuthEngine.reload()` is invoked with a new policy. |
+| `onDecision` | `(event: DecisionEvent) => void \| Promise<void>` | Called after every evaluation. Always receives the honest (pre-mode-override) decision. |
+| `onError` | `(err: Error, ctx: AuthContext) => void` | (optional) Called when an error is caught during evaluation. |
+| `onPolicyReload` | `(policy: PolicyDefinition) => void` | (optional) Called when `engine.reload()` is invoked. |
 
 ---
 
@@ -368,7 +553,7 @@ export interface DecisionEvent {
 
 | Property | Type | Description |
 |---|---|---|
-| `decision` | `Decision` | The decision produced by the evaluation. |
+| `decision` | `Decision` | The honest (pre-override) decision. |
 | `traceId` | `string` | (optional) Correlation ID for distributed tracing. |
 | `source` | `string` | (optional) Label identifying which part of the application triggered the evaluation. |
 
@@ -385,8 +570,8 @@ export interface PolicyLoader<S extends Subject = Subject, R extends Resource = 
 
 | Method | Signature | Description |
 |---|---|---|
-| `load` | `() => Promise<PolicyDefinition<S, R>>` | Asynchronously loads and returns the policy. Called once at engine construction. |
-| `watch` | `(cb: (policy: PolicyDefinition<S, R>) => void) => void` | (optional) Subscribes to policy changes. The callback is invoked with the new policy whenever the source changes. |
+| `load` | `() => Promise<PolicyDefinition<S, R>>` | Asynchronously loads and returns the policy. |
+| `watch` | `(cb) => void` | (optional) Subscribes to policy changes. Pass to `fromLoader` rather than wiring manually. |
 
 ---
 
@@ -402,7 +587,7 @@ export interface EvaluateReadResult {
 | Property | Type | Description |
 |---|---|---|
 | `decision` | `Decision` | The access decision for the read action. |
-| `allowedFields` | `string[]` | List of field names the subject is permitted to read. Empty when `decision.allowed` is `false`. |
+| `allowedFields` | `string[]` | Fields the subject may read. Empty when `decision.allowed` is `false`. |
 
 ---
 

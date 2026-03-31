@@ -6,6 +6,16 @@ import type { DevToolsObserver, DecisionFlag, PersistedDecision } from './observ
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+export interface PolicySwitcherOptions {
+  /** Directory to scan for .yaml, .yml, and .json policy files. */
+  dir: string
+  /**
+   * Called when the user selects and applies a policy file from the sidebar.
+   * Receives the full absolute path to the selected file.
+   */
+  onApply: (filePath: string) => Promise<void>
+}
+
 export interface DevServerOptions {
   observer:    DevToolsObserver
   port?:       number
@@ -14,6 +24,12 @@ export interface DevServerOptions {
    * in the current working directory.
    */
   flagsFile?:  string
+  /**
+   * Optional policy switcher. When provided, the devtools sidebar shows a
+   * dropdown of policy files in the given directory and an Apply button that
+   * calls onApply with the selected file path.
+   */
+  policies?:   PolicySwitcherOptions
 }
 
 export interface DevServer {
@@ -91,6 +107,59 @@ export function createDevServer(options: DevServerOptions): DevServer {
 
       sseClients.add(res)
       req.on('close', () => sseClients.delete(res))
+      return
+    }
+
+    // ── GET /policies ────────────────────────────────────────────────────────
+    if (req.method === 'GET' && url.pathname === '/policies') {
+      res.setHeader('Content-Type', 'application/json')
+      if (!options.policies) {
+        res.writeHead(200)
+        res.end(JSON.stringify({ configured: false, files: [] }))
+        return
+      }
+      try {
+        const entries = fs.readdirSync(options.policies.dir)
+        const files = entries
+          .filter(f => /\.(yaml|yml|json)$/.test(f))
+          .sort()
+        res.writeHead(200)
+        res.end(JSON.stringify({ configured: true, dir: options.policies.dir, files }))
+      } catch {
+        res.writeHead(200)
+        res.end(JSON.stringify({ configured: true, dir: options.policies.dir, files: [], error: 'Could not read directory' }))
+      }
+      return
+    }
+
+    // ── POST /policies/apply ─────────────────────────────────────────────────
+    if (req.method === 'POST' && url.pathname === '/policies/apply') {
+      if (!options.policies) {
+        res.writeHead(400)
+        res.end(JSON.stringify({ error: 'Policy switcher not configured' }))
+        return
+      }
+      let body = ''
+      req.on('data', chunk => { body += chunk })
+      req.on('end', async () => {
+        try {
+          const { file } = JSON.parse(body) as { file: string }
+          if (!file || typeof file !== 'string' || file.includes('..')) {
+            res.writeHead(400)
+            res.end(JSON.stringify({ error: 'invalid file' }))
+            return
+          }
+          const fullPath = path.join(options.policies!.dir, file)
+          await options.policies!.onApply(fullPath)
+          res.setHeader('Content-Type', 'application/json')
+          res.writeHead(200)
+          res.end(JSON.stringify({ ok: true, file }))
+        } catch (err) {
+          res.setHeader('Content-Type', 'application/json')
+          res.writeHead(500)
+          res.end(JSON.stringify({ error: err instanceof Error ? err.message : 'Apply failed' }))
+        }
+      })
       return
     }
 

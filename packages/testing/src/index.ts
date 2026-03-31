@@ -58,7 +58,13 @@ export function coverageReport<S extends Subject = Subject, R extends Resource =
   engine: AuthEngine<S, R>,
   events: DecisionEvent[]
 ): CoverageReport {
-  const policy: PolicyDefinition<S, R> = engine.getPolicy()
+  const policy = engine.getPolicy()
+  if (!policy) {
+    throw new Error(
+      'coverageReport requires a static policy — engine has a dynamic or composite resolver. ' +
+      'Run at least one evaluation first, or pass a static PolicyDefinition to createAuthEngine.'
+    )
+  }
   const allRuleIds = policy.rules.map(r => r.id)
   const reasonsHit = new Set(events.map(e => e.decision.reason))
 

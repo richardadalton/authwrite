@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { withAuth } from '@authwrite/nextjs'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from '@authwrite/core'
 import type { RouteContext } from '@authwrite/nextjs'
 import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
 
@@ -175,16 +175,16 @@ describe('onDeny', () => {
 
 describe('enforcer integration', () => {
   it('audit mode — denied policy allows through', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: denyAll }), { mode: 'audit' })
-    const handler = withAuth({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' }, okHandler)
+    const engine = createAuthEngine({ policy: denyAll, mode: 'audit' })
+    const handler = withAuth({ engine, subject: () => user(), resource: () => doc(), action: 'read' }, okHandler)
     const res = await handler(makeRequest(), makeCtx())
 
     expect(res.status).toBe(200)
   })
 
-  it('lockdown mode — allowed policy is denied', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: allowAll }), { mode: 'lockdown' })
-    const handler = withAuth({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' }, okHandler)
+  it('suspended mode — allowed policy is denied', async () => {
+    const engine = createAuthEngine({ policy: allowAll, mode: 'suspended' })
+    const handler = withAuth({ engine, subject: () => user(), resource: () => doc(), action: 'read' }, okHandler)
     const res = await handler(makeRequest(), makeCtx())
 
     expect(res.status).toBe(403)

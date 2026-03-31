@@ -6,8 +6,8 @@ Complete API reference for every published `@authwrite` package. These documents
 
 | Package | Document | What it covers |
 |---|---|---|
-| `@authwrite/core` | [core-api.md](core-api.md) | `createAuthEngine`, `createEnforcer`, `evaluate`, `evaluateAll`, `evaluateRead`, `can`, `applyFieldFilter`, and all core types (`Subject`, `Resource`, `AuthContext`, `Decision`, `PolicyDefinition`, `PolicyRule`, `FieldRule`, `AuthObserver`, `PolicyLoader`). |
-| `@authwrite/express` | [express-api.md](express-api.md) | `createAuthMiddleware`, `AuthMiddlewareConfig`, resolver signatures, `req.authDecision`, default deny response shape, and `onDeny`. |
+| `@authwrite/core` | [core-api.md](core-api.md) | `createAuthEngine`, `evaluatePolicy`, `fromLoader`, `intersect`, `union`, `firstMatch`, `evaluate`, `evaluateAll`, `evaluateRead`, `can`, `permissions`, `applyFieldFilter`, and all core types (`Subject`, `Resource`, `AuthContext`, `Decision`, `PolicyDefinition`, `PolicyRule`, `FieldRule`, `AuthObserver`, `PolicyLoader`, `PolicyResolver`). |
+| `@authwrite/express` | [express-api.md](express-api.md) | `createExpressAuth`, `createAuthMiddleware`, `ExpressAuthConfig`, `AuthMiddlewareConfig`, resolver signatures, `req.authDecision`, default deny response shape, and `onDeny`. |
 | `@authwrite/fastify` | [fastify-api.md](fastify-api.md) | `createAuthHook`, `AuthHookConfig`, resolver signatures, `req.authDecision`, default deny response shape, and `onDeny`. |
 | `@authwrite/nextjs` | [nextjs-api.md](nextjs-api.md) | `withAuth`, `WithAuthConfig`, `RouteContext`, resolver signatures, default deny response shape, and `onDeny`. |
 | `@authwrite/hono` | [hono-api.md](hono-api.md) | `createAuthMiddleware`, `AuthMiddlewareConfig`, `AUTH_DECISION_KEY`, resolver signatures, default deny response shape, and `onDeny`. |

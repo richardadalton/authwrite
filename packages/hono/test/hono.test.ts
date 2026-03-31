@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createAuthMiddleware, AUTH_DECISION_KEY } from '@authwrite/hono'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from '@authwrite/core'
 import type { Context, Next } from 'hono'
 import type { PolicyDefinition, Subject, Resource, Decision } from '@authwrite/core'
 
@@ -229,8 +229,8 @@ describe('context authDecision variable', () => {
 
 describe('enforcer integration', () => {
   it('audit mode — denied policy allows through', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: denyAll }), { mode: 'audit' })
-    const mw = createAuthMiddleware({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' })
+    const engine = createAuthEngine({ policy: denyAll, mode: 'audit' })
+    const mw = createAuthMiddleware({ engine, subject: () => user(), resource: () => doc(), action: 'read' })
     const c = makeContext()
     const next = await run(mw, c)
 
@@ -239,9 +239,9 @@ describe('enforcer integration', () => {
     expect(decision.override).toBe('permissive')
   })
 
-  it('lockdown mode — allowed policy is denied', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: allowAll }), { mode: 'lockdown' })
-    const mw = createAuthMiddleware({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' })
+  it('suspended mode — allowed policy is denied', async () => {
+    const engine = createAuthEngine({ policy: allowAll, mode: 'suspended' })
+    const mw = createAuthMiddleware({ engine, subject: () => user(), resource: () => doc(), action: 'read' })
     const c = makeContext()
     const next = await run(mw, c)
 

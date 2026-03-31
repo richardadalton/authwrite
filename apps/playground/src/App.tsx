@@ -106,7 +106,7 @@ export function App() {
         </div>
         <div className="mode-toggle">
           <span className="mode-label">Enforcer mode</span>
-          {(['enforce', 'audit', 'lockdown'] as EnforcerMode[]).map(m => (
+          {(['enforce', 'audit', 'suspended', 'lockdown'] as EnforcerMode[]).map(m => (
             <button
               key={m}
               className={`mode-btn mode-${m}${mode === m ? ' active' : ''}`}
@@ -126,11 +126,17 @@ export function App() {
           Use this to observe your policy before enforcing it.
         </div>
       )}
+      {mode === 'suspended' && (
+        <div className="mode-banner suspended">
+          ⏸ Suspended mode — policy evaluates and observers fire, but all access is denied.
+          The decision log shows <code>override: suspended</code>.
+          Use this to freeze access while preserving the audit trail.
+        </div>
+      )}
       {mode === 'lockdown' && (
         <div className="mode-banner lockdown">
-          🔒 Lockdown mode — all access denied regardless of policy.
-          The decision log shows <code>override: lockdown</code>.
-          Use this to freeze all access in an emergency.
+          🔴 Lockdown mode — engine is bypassed entirely. All requests rejected immediately with no policy evaluation and no observer events.
+          Use this for the most serious threat scenarios.
         </div>
       )}
 

@@ -13,13 +13,13 @@ export async function buildLinks<
 >(config: BuildLinksConfig<S, R>): Promise<LinkMap>
 ```
 
-Evaluates every action in `config.actions` using `engine.evaluateAll()` and returns a `LinkMap` containing only the links the subject is permitted to follow.
+Evaluates every action in `config.actions` using `engine.permissions()` and returns a `LinkMap` containing only the links the subject is permitted to follow. Does not fire observers — use `evaluate()` or `evaluateAll()` directly when you need an audited decision.
 
 ### `BuildLinksConfig` options
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `engine` | `AuthEvaluator<S, R>` | required | The evaluator used to make authorization decisions. Accepts an `AuthEngine` or `Enforcer`. |
+| `engine` | `AuthEvaluator<S, R>` | required | The evaluator used to make authorization decisions. |
 | `subject` | `S` | required | The subject whose permissions are evaluated. |
 | `resource` | `R` | — | (optional) The resource being acted upon. Omit for subject-level actions. |
 | `actions` | `Record<Action, LinkTemplate>` | required | Map of action name to link template. Only entries whose action is permitted appear in the result. |
@@ -49,18 +49,29 @@ Extends `BuildLinksConfig` with one additional field:
 
 ---
 
-## `linksFromDecisions(decisions, actions)`
+## `linksFromDecisions(permissions, actions)`
 
 ```typescript
 export function linksFromDecisions(
-  decisions: Record<string, { allowed: boolean }>,
-  actions:   Record<Action, LinkTemplate>,
+  permissions: Record<string, boolean>,
+  actions:     Record<Action, LinkTemplate>,
 ): LinkMap
 ```
 
-Synchronous variant. Filters `actions` using a pre-fetched `evaluateAll` result. Only actions whose decision has `allowed: true` and that have a corresponding template are included.
+Synchronous variant for cases where you have already called `engine.permissions()` and want to build links without an additional async round-trip.
 
-This avoids a second async round-trip when you have already called `evaluateAll()` for another purpose.
+```typescript
+const perms = await engine.permissions(subject, resource, ['read', 'write', 'delete'])
+// { read: true, write: true, delete: false }
+
+const links = linksFromDecisions(perms, {
+  read:   { href: '/documents/doc-1', method: 'GET'    },
+  write:  { href: '/documents/doc-1', method: 'PUT'    },
+  delete: { href: '/documents/doc-1', method: 'DELETE' },
+})
+// { read: { href: '...' }, write: { href: '...' } }
+// delete absent — not permitted
+```
 
 ---
 
@@ -96,9 +107,9 @@ A map of action name to link template. Only permitted actions are present.
 
 ## Behaviour notes
 
-### `evaluateAll` is called once
+### `engine.permissions()` is called once
 
-`buildLinks` and `embedLinks` call `engine.evaluateAll()` once with all action names from the `actions` map. The engine evaluates the full policy a single time, regardless of how many actions are passed.
+`buildLinks` and `embedLinks` call `engine.permissions()` once with all action names from the `actions` map. This does not fire observers — it is a UI rendering query, not an enforcement decision.
 
 ### `self` is unconditional
 
@@ -108,15 +119,14 @@ The `self` link in `embedLinks` is not subject to policy evaluation. It is inclu
 
 `embedLinks` returns a new object (`{ ...data, _links }`). The original `data` argument is never modified.
 
-### Enforcer modes
-
-All three functions respect the Enforcer mode:
+### Engine mode effects
 
 | Mode | Behaviour |
 |---|---|
 | `enforce` | Links reflect real policy decisions. |
-| `audit` | All decisions are `allowed: true` — all action links are returned. |
-| `lockdown` | All decisions are `allowed: false` — no action links are returned. `self` is still included by `embedLinks` when provided. |
+| `audit` | All actions return `true` from `permissions()` — all links are included. |
+| `suspended` | All actions return `false` — no action links are included. `self` is still included by `embedLinks` when provided. |
+| `lockdown` | All actions return `false` without evaluation — no action links are included. `self` is still included by `embedLinks` when provided. |
 
 ---
 
@@ -141,7 +151,7 @@ const links = await buildLinks({
     archive: { href: '/documents/doc-1/archive', method: 'POST' },
   },
 })
-// links.read present; write/delete/archive absent
+// links.read present; write/delete/archive absent (editor of another's doc)
 
 // ── embedLinks ────────────────────────────────────────────────────────────────
 
@@ -159,13 +169,13 @@ const body = await embedLinks(document, {
 
 // ── linksFromDecisions ────────────────────────────────────────────────────────
 
-const decisions = await engine.evaluateAll({
-  subject:  { id: 'u1', roles: ['editor'] },
-  resource: document,
-  actions:  ['read', 'write', 'delete'],
-})
+const perms = await engine.permissions(
+  { id: 'u1', roles: ['editor'] },
+  { type: 'document', id: 'doc-1', ownerId: 'other' },
+  ['read', 'write', 'delete'],
+)
 
-const links2 = linksFromDecisions(decisions, {
+const links2 = linksFromDecisions(perms, {
   read:   { href: '/documents/doc-1', method: 'GET'    },
   write:  { href: '/documents/doc-1', method: 'PUT'    },
   delete: { href: '/documents/doc-1', method: 'DELETE' },

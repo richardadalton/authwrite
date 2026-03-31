@@ -1,0 +1,14 @@
+# Open policy — all authenticated users can read everything
+id: documents
+version: "1.0.0-open"
+defaultEffect: deny
+rules:
+  - id: admin-full-access
+    priority: 10
+  - id: owner-full-access
+    priority: 5
+  - id: editor-read-write
+    priority: 1
+  - id: all-users-read
+    priority: 1
+    # any authenticated user can read any document

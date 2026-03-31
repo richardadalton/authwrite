@@ -1,5 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DevToolsObserver } from '@authwrite/devtools'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { DevToolsObserver, createDevServer } from '@authwrite/devtools'
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 import type { DecisionEvent } from '@authwrite/core'
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -81,11 +84,18 @@ describe('DevToolsObserver', () => {
     expect(d.allowed).toBe(true)
   })
 
+  it('preserves suspended override', () => {
+    observer.onDecision(makeEvent({ allowed: false, effect: 'allow', override: 'suspended' }))
+    const [d] = observer.getBuffer()
+    expect(d.override).toBe('suspended')
+    expect(d.effect).toBe('allow')
+    expect(d.allowed).toBe(false)
+  })
+
   it('preserves lockdown override', () => {
-    observer.onDecision(makeEvent({ allowed: false, effect: 'allow', override: 'lockdown' }))
+    observer.onDecision(makeEvent({ allowed: false, effect: 'deny', override: 'lockdown' }))
     const [d] = observer.getBuffer()
     expect(d.override).toBe('lockdown')
-    expect(d.effect).toBe('allow')
     expect(d.allowed).toBe(false)
   })
 
@@ -169,5 +179,139 @@ describe('DevToolsObserver', () => {
     expect(a).toHaveLength(1)
     expect(b).toHaveLength(1)
     expect(a[0]).toBe(b[0])
+  })
+})
+
+// ─── GET /policies ────────────────────────────────────────────────────────────
+
+describe('GET /policies', () => {
+  let tmpDir: string
+  let server: ReturnType<typeof createDevServer>
+  let baseUrl: string
+
+  beforeEach(async () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'aw-devtools-test-'))
+    const observer = new DevToolsObserver()
+    server  = createDevServer({ observer, port: 15099, policies: { dir: tmpDir, onApply: async () => {} } })
+    await server.start()
+    baseUrl = server.url
+  })
+
+  afterEach(async () => {
+    try { await server.stop() } catch { /* already stopped in test */ }
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('returns configured:true and lists yaml/yml/json files', async () => {
+    writeFileSync(join(tmpDir, 'policy-a.yaml'), 'id: a\ndefaultEffect: deny\nrules: []')
+    writeFileSync(join(tmpDir, 'policy-b.yml'),  'id: b\ndefaultEffect: allow\nrules: []')
+    writeFileSync(join(tmpDir, 'notes.txt'), 'not a policy')
+
+    const res  = await fetch(`${baseUrl}/policies`)
+    const body = await res.json() as { configured: boolean; files: string[] }
+
+    expect(body.configured).toBe(true)
+    expect(body.files).toContain('policy-a.yaml')
+    expect(body.files).toContain('policy-b.yml')
+    expect(body.files).not.toContain('notes.txt')
+  })
+
+  it('returns configured:false and empty files when policies option is not set', async () => {
+    await server.stop()
+    const observer2 = new DevToolsObserver()
+    const bare = createDevServer({ observer: observer2, port: 15098 })
+    await bare.start()
+    try {
+      const res  = await fetch(`${bare.url}/policies`)
+      const body = await res.json() as { configured: boolean; files: string[] }
+      expect(body.configured).toBe(false)
+      expect(body.files).toEqual([])
+    } finally {
+      await bare.stop()
+    }
+  })
+
+  it('returns an empty files array when the directory is empty', async () => {
+    const res  = await fetch(`${baseUrl}/policies`)
+    const body = await res.json() as { configured: boolean; files: string[] }
+    expect(body.configured).toBe(true)
+    expect(body.files).toEqual([])
+  })
+})
+
+// ─── POST /policies/apply ─────────────────────────────────────────────────────
+
+describe('POST /policies/apply', () => {
+  let tmpDir: string
+  let server: ReturnType<typeof createDevServer>
+  let baseUrl: string
+  let onApply: ReturnType<typeof vi.fn>
+
+  beforeEach(async () => {
+    tmpDir  = mkdtempSync(join(tmpdir(), 'aw-devtools-test-'))
+    onApply = vi.fn().mockResolvedValue(undefined)
+    writeFileSync(join(tmpDir, 'policy-v2.yaml'), 'id: v2\ndefaultEffect: allow\nrules: []')
+    const observer = new DevToolsObserver()
+    server  = createDevServer({ observer, port: 15097, policies: { dir: tmpDir, onApply } })
+    await server.start()
+    baseUrl = server.url
+  })
+
+  afterEach(async () => {
+    try { await server.stop() } catch { /* already stopped in test */ }
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('calls onApply with the full path and returns ok:true', async () => {
+    const res  = await fetch(`${baseUrl}/policies/apply`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ file: 'policy-v2.yaml' }),
+    })
+    const body = await res.json() as { ok: boolean; file: string }
+
+    expect(res.status).toBe(200)
+    expect(body.ok).toBe(true)
+    expect(body.file).toBe('policy-v2.yaml')
+    expect(onApply).toHaveBeenCalledWith(join(tmpDir, 'policy-v2.yaml'))
+  })
+
+  it('returns 400 when file contains path traversal', async () => {
+    const res = await fetch(`${baseUrl}/policies/apply`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ file: '../secrets.yaml' }),
+    })
+    expect(res.status).toBe(400)
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('returns 500 when onApply throws', async () => {
+    onApply.mockRejectedValueOnce(new Error('parse error'))
+    const res  = await fetch(`${baseUrl}/policies/apply`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ file: 'policy-v2.yaml' }),
+    })
+    const body = await res.json() as { error: string }
+    expect(res.status).toBe(500)
+    expect(body.error).toBe('parse error')
+  })
+
+  it('returns 400 when policies option is not configured', async () => {
+    await server.stop()
+    const observer2 = new DevToolsObserver()
+    const bare = createDevServer({ observer: observer2, port: 15096 })
+    await bare.start()
+    try {
+      const res = await fetch(`${bare.url}/policies/apply`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ file: 'policy.yaml' }),
+      })
+      expect(res.status).toBe(400)
+    } finally {
+      await bare.stop()
+    }
   })
 })

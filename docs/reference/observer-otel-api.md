@@ -52,7 +52,7 @@ Every call to `onDecision` creates one span with the following characteristics.
 | `authz.resource.type` | `string` | resource present | The value of `decision.context.resource.type`. |
 | `authz.resource.id` | `string` | resource present and `resource.id` set | The value of `decision.context.resource.id`. |
 | `authz.defaulted` | `boolean` | `decision.defaulted === true` | Set to `true` when the policy default effect was applied. |
-| `authz.override` | `string` | `decision.override` is set | The value of `decision.override` (`'permissive'` or `'lockdown'`). |
+| `authz.override` | `string` | `decision.override` is set | The value of `decision.override` (`'permissive'`, `'suspended'`, or `'lockdown'`). Note: in `lockdown` mode the engine is never called, so this observer will not fire. |
 | `authz.source` | `string` | `event.source` is set | The value of `event.source`. |
 
 Any attributes specified in `OtelObserverConfig.attributes` are also added to every span.

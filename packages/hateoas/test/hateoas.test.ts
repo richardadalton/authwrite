@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildLinks, embedLinks, linksFromDecisions } from '@authwrite/hateoas'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from '@authwrite/core'
 import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
 import type { LinkTemplate } from '@authwrite/hateoas'
 
@@ -216,12 +216,8 @@ describe('embedLinks', () => {
 
 describe('linksFromDecisions', () => {
   it('returns only links for allowed decisions', () => {
-    const decisions = {
-      read:   { allowed: true  },
-      write:  { allowed: false },
-      delete: { allowed: false },
-    }
-    const links = linksFromDecisions(decisions, {
+    const perms = { read: true, write: false, delete: false }
+    const links = linksFromDecisions(perms, {
       read:   { href: '/doc', method: 'GET'    },
       write:  { href: '/doc', method: 'PUT'    },
       delete: { href: '/doc', method: 'DELETE' },
@@ -233,8 +229,8 @@ describe('linksFromDecisions', () => {
   })
 
   it('returns empty map when all decisions are denied', () => {
-    const decisions = { read: { allowed: false }, write: { allowed: false } }
-    const links = linksFromDecisions(decisions, {
+    const perms = { read: false, write: false }
+    const links = linksFromDecisions(perms, {
       read:  { href: '/doc', method: 'GET' },
       write: { href: '/doc', method: 'PUT' },
     })
@@ -243,8 +239,8 @@ describe('linksFromDecisions', () => {
   })
 
   it('returns all links when all decisions are allowed', () => {
-    const decisions = { read: { allowed: true }, write: { allowed: true } }
-    const links = linksFromDecisions(decisions, {
+    const perms = { read: true, write: true }
+    const links = linksFromDecisions(perms, {
       read:  { href: '/doc', method: 'GET' },
       write: { href: '/doc', method: 'PUT' },
     })
@@ -253,8 +249,8 @@ describe('linksFromDecisions', () => {
   })
 
   it('handles decisions that have no corresponding template gracefully', () => {
-    const decisions = { read: { allowed: true }, unknown: { allowed: true } }
-    const links = linksFromDecisions(decisions, {
+    const perms = { read: true, unknown: true }
+    const links = linksFromDecisions(perms, {
       read: { href: '/doc', method: 'GET' },
     })
 
@@ -262,13 +258,13 @@ describe('linksFromDecisions', () => {
     expect(links).not.toHaveProperty('unknown')
   })
 
-  it('works with a pre-fetched evaluateAll result', async () => {
-    const decisions = await engine.evaluateAll({
-      subject:  admin(),
-      resource: doc({ status: 'archived' }),
-      actions:  ['read', 'write', 'delete'],
-    })
-    const links = linksFromDecisions(decisions, {
+  it('works with pre-fetched permissions result', async () => {
+    const perms = await engine.permissions(
+      admin(),
+      doc({ status: 'archived' }),
+      ['read', 'write', 'delete'],
+    )
+    const links = linksFromDecisions(perms, {
       read:   { href: '/doc', method: 'GET'    },
       write:  { href: '/doc', method: 'PUT'    },
       delete: { href: '/doc', method: 'DELETE' },
@@ -282,19 +278,19 @@ describe('linksFromDecisions', () => {
 
 // ─── Enforcer integration ─────────────────────────────────────────────────────
 
-describe('enforcer integration', () => {
+describe('mode integration', () => {
   it('audit mode — denied actions appear as links (permissive override)', async () => {
-    const enforcer = createEnforcer(engine, { mode: 'audit' })
+    const auditEngine = createAuthEngine({ policy: documentPolicy, mode: 'audit' })
     const stranger = user({ roles: [] })
-    const links = await buildLinks({ engine: enforcer, subject: stranger, resource: doc(), actions: actionTemplates })
+    const links = await buildLinks({ engine: auditEngine, subject: stranger, resource: doc(), actions: actionTemplates })
 
     // In audit mode everything is allowed, so all links should be present
     expect(Object.keys(links).length).toBeGreaterThan(0)
   })
 
-  it('lockdown mode — no links returned regardless of policy', async () => {
-    const enforcer = createEnforcer(engine, { mode: 'lockdown' })
-    const links = await buildLinks({ engine: enforcer, subject: admin(), resource: doc(), actions: actionTemplates })
+  it('suspended mode — no links returned regardless of policy', async () => {
+    const suspendedEngine = createAuthEngine({ policy: documentPolicy, mode: 'suspended' })
+    const links = await buildLinks({ engine: suspendedEngine, subject: admin(), resource: doc(), actions: actionTemplates })
 
     expect(Object.keys(links)).toHaveLength(0)
   })

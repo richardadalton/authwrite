@@ -1,0 +1,15 @@
+# Standard policy — admins, owners, editors read/write, viewers read published
+id: documents
+version: "1.0.0"
+defaultEffect: deny
+rules:
+  - id: archived-blocks-mutation
+    priority: 20
+  - id: admin-full-access
+    priority: 10
+  - id: owner-full-access
+    priority: 5
+  - id: editor-read-write
+    priority: 1
+  - id: viewer-read-published
+    priority: 1

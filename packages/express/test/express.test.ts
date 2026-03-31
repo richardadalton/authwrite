@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createAuthMiddleware } from '@authwrite/express'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from "@authwrite/core"
 import type { RequestHandler, Request, Response, NextFunction } from 'express'
 import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
 
@@ -347,11 +347,10 @@ describe('error handling', () => {
 // ─── Enforcer integration ─────────────────────────────────────────────────────
 
 describe('enforcer integration', () => {
-  it('accepts an enforcer in audit mode — denied policy still allows through', async () => {
-    const engine   = createAuthEngine({ policy: denyAll })
-    const enforcer = createEnforcer(engine, { mode: 'audit' })
+  it('audit mode — denied policy still allows through', async () => {
+    const engine = createAuthEngine({ policy: denyAll, mode: 'audit' })
     const mw = createAuthMiddleware({
-      engine:   enforcer,
+      engine,
       subject:  () => user(),
       resource: () => doc(),
       action:   'read',
@@ -364,11 +363,10 @@ describe('enforcer integration', () => {
       .toBe('permissive')
   })
 
-  it('accepts an enforcer in lockdown mode — allowed policy still denies', async () => {
-    const engine   = createAuthEngine({ policy: allowAll })
-    const enforcer = createEnforcer(engine, { mode: 'lockdown' })
+  it('suspended mode — allowed policy still denies', async () => {
+    const engine = createAuthEngine({ policy: allowAll, mode: 'suspended' })
     const mw = createAuthMiddleware({
-      engine:   enforcer,
+      engine,
       subject:  () => user(),
       resource: () => doc(),
       action:   'read',

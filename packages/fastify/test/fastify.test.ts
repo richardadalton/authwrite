@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createAuthHook } from '@authwrite/fastify'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from '@authwrite/core'
 import type { FastifyRequest, FastifyReply } from 'fastify'
 import type { PolicyDefinition, Subject, Resource } from '@authwrite/core'
 
@@ -213,8 +213,8 @@ describe('req.authDecision', () => {
 
 describe('enforcer integration', () => {
   it('audit mode — denied policy allows through', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: denyAll }), { mode: 'audit' })
-    const hook = createAuthHook({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' })
+    const engine = createAuthEngine({ policy: denyAll, mode: 'audit' })
+    const hook = createAuthHook({ engine, subject: () => user(), resource: () => doc(), action: 'read' })
     const { req, reply } = makeMocks()
     await run(hook, req, reply)
 
@@ -222,9 +222,9 @@ describe('enforcer integration', () => {
     expect((req as FastifyRequest).authDecision?.override).toBe('permissive')
   })
 
-  it('lockdown mode — allowed policy is denied', async () => {
-    const enforcer = createEnforcer(createAuthEngine({ policy: allowAll }), { mode: 'lockdown' })
-    const hook = createAuthHook({ engine: enforcer, subject: () => user(), resource: () => doc(), action: 'read' })
+  it('suspended mode — allowed policy is denied', async () => {
+    const engine = createAuthEngine({ policy: allowAll, mode: 'suspended' })
+    const hook = createAuthHook({ engine, subject: () => user(), resource: () => doc(), action: 'read' })
     const { req, reply } = makeMocks()
     await run(hook, req, reply)
 

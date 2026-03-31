@@ -21,7 +21,7 @@ interface PersistedDecision {
   reason:     string
   defaulted:  boolean
   durationMs: number
-  override?:  'permissive' | 'lockdown'
+  override?:  'permissive' | 'suspended' | 'lockdown'
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -33,14 +33,23 @@ let collapsed                      = false
 let flagCount                      = 0
 let connected                      = false
 
+const sections: Record<string, boolean> = { decisions: true, policy: false }
+
+let policyFiles:     string[]  = []
+let policyFetched              = false
+let policyApplying             = false
+let policyStatus:    string    = ''
+let policyStatusOk             = false
+
 // ─── DOM refs (set in mount()) ────────────────────────────────────────────────
 
-let shadow:      ShadowRoot
-let listEl:      HTMLElement
-let badgeEl:     HTMLElement
-let statusDotEl: HTMLElement
-let statusTxtEl: HTMLElement
-let toggleTabEl: HTMLButtonElement
+let shadow:          ShadowRoot
+let listEl:          HTMLElement
+let badgeEl:         HTMLElement
+let statusDotEl:     HTMLElement
+let statusTxtEl:     HTMLElement
+let toggleTabEl:     HTMLButtonElement
+let policyBodyEl:    HTMLElement
 
 // ─── Rendering ────────────────────────────────────────────────────────────────
 
@@ -67,7 +76,7 @@ function renderDecision(d: PersistedDecision): string {
   const isExpanded = expandedId === d.id
   const isFlagging = flaggingId === d.id
 
-  // In audit/lockdown mode the policy effect can differ from the final outcome
+  // In audit/suspended/lockdown mode the policy effect can differ from the final outcome
   const policyDenied  = d.effect === 'deny'
   const finalAllowed  = d.allowed
   const hasOverride   = !!d.override
@@ -149,6 +158,115 @@ function renderFlagForm(d: PersistedDecision): string {
     </div>`
 }
 
+// ─── Policy section ───────────────────────────────────────────────────────────
+
+function renderPolicySection() {
+  if (!policyBodyEl) return
+
+  if (!policyFetched) {
+    policyBodyEl.innerHTML = `<div class="policy-loading">Loading…</div>`
+    return
+  }
+
+  if (policyFiles.length === 0) {
+    policyBodyEl.innerHTML = `<div class="policy-empty">No policy files found.<br>Configure a <code>policies.dir</code> in devtools options.</div>`
+    return
+  }
+
+  const options = policyFiles.map(f =>
+    `<option value="${f}">${f}</option>`
+  ).join('')
+
+  const statusHtml = policyStatus
+    ? `<span class="policy-status ${policyStatusOk ? 'policy-status--ok' : 'policy-status--err'}">${policyStatus}</span>`
+    : ''
+
+  policyBodyEl.innerHTML = `
+    <label class="policy-label">Policy file</label>
+    <select class="policy-select" id="aw-policy-select">
+      <option value="">— select —</option>
+      ${options}
+    </select>
+    <div class="policy-actions">
+      <button class="btn btn--apply${policyApplying ? ' btn--applying' : ''}" data-action="policy-apply" ${policyApplying ? 'disabled' : ''}>
+        ${policyApplying ? 'Applying…' : 'Apply'}
+      </button>
+      ${statusHtml}
+    </div>`
+}
+
+function fetchPolicies() {
+  fetch(`http://localhost:${PORT}/policies`)
+    .then(r => r.json())
+    .then((data: { configured: boolean; files: string[] }) => {
+      policyFiles   = data.files ?? []
+      policyFetched = true
+      renderPolicySection()
+    })
+    .catch(() => {
+      policyFiles   = []
+      policyFetched = true
+      policyStatus  = 'Could not reach server'
+      policyStatusOk = false
+      renderPolicySection()
+    })
+}
+
+function applyPolicy() {
+  const selectEl = shadow.getElementById('aw-policy-select') as HTMLSelectElement | null
+  const file     = selectEl?.value ?? ''
+  if (!file) return
+
+  policyApplying = true
+  policyStatus   = ''
+  renderPolicySection()
+
+  fetch(`http://localhost:${PORT}/policies/apply`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ file }),
+  })
+    .then(r => r.json())
+    .then((data: { ok?: boolean; error?: string }) => {
+      policyApplying = false
+      if (data.ok) {
+        policyStatus   = `✓ Applied ${file}`
+        policyStatusOk = true
+      } else {
+        policyStatus   = `✗ ${data.error ?? 'Failed'}`
+        policyStatusOk = false
+      }
+      renderPolicySection()
+    })
+    .catch(() => {
+      policyApplying = false
+      policyStatus   = '✗ Request failed'
+      policyStatusOk = false
+      renderPolicySection()
+    })
+}
+
+function toggleSection(name: string) {
+  sections[name] = !sections[name]
+
+  const body    = shadow.getElementById(`aw-section-body-${name}`)
+  const chevron = shadow.getElementById(`aw-chevron-${name}`)
+  if (!body || !chevron) return
+
+  if (sections[name]) {
+    body.style.display  = ''
+    chevron.textContent = '▼'
+  } else {
+    body.style.display  = 'none'
+    chevron.textContent = '▶'
+  }
+
+  // Lazy-load policy files on first open
+  if (name === 'policy' && sections[name] && !policyFetched) {
+    fetchPolicies()
+  }
+}
+
 // ─── Event handling ───────────────────────────────────────────────────────────
 
 function handleClick(e: Event) {
@@ -193,6 +311,16 @@ function handleClick(e: Event) {
 
     case 'toggle-sidebar':
       toggleSidebar()
+      break
+
+    case 'toggle-section': {
+      const section = actionEl.dataset['section']
+      if (section) toggleSection(section)
+      break
+    }
+
+    case 'policy-apply':
+      applyPolicy()
       break
   }
 }
@@ -286,11 +414,12 @@ function mount() {
   shadow.appendChild(wrap)
 
   // Wire refs
-  listEl      = shadow.getElementById('aw-list')!
-  badgeEl     = shadow.getElementById('aw-badge')!
-  statusDotEl = shadow.getElementById('aw-status-dot')!
-  statusTxtEl = shadow.getElementById('aw-status-txt')!
-  toggleTabEl = shadow.getElementById('aw-toggle')! as HTMLButtonElement
+  listEl       = shadow.getElementById('aw-section-body-decisions')!
+  badgeEl      = shadow.getElementById('aw-badge')!
+  statusDotEl  = shadow.getElementById('aw-status-dot')!
+  statusTxtEl  = shadow.getElementById('aw-status-txt')!
+  toggleTabEl  = shadow.getElementById('aw-toggle')! as HTMLButtonElement
+  policyBodyEl = shadow.getElementById('aw-section-body-policy')!
 
   toggleTabEl.addEventListener('click', toggleSidebar)
   shadow.addEventListener('click', handleClick)
@@ -303,17 +432,31 @@ function mount() {
 
 const TEMPLATE = `
   <div id="aw-sidebar" class="sidebar">
+
     <div class="header">
       <span class="logo">◊</span>
       <span class="header-title">Authwrite DevTools</span>
+    </div>
+
+    <div class="section-header" data-action="toggle-section" data-section="decisions">
+      <span class="section-chevron" id="aw-chevron-decisions">▼</span>
+      <span class="section-title">Decisions</span>
       <span class="badge" id="aw-badge"></span>
       <button class="btn btn--ghost btn--sm" data-action="clear">clear</button>
     </div>
-    <div class="list" id="aw-list"></div>
+    <div class="section-body section-body--decisions" id="aw-section-body-decisions"></div>
+
+    <div class="section-header" data-action="toggle-section" data-section="policy">
+      <span class="section-chevron" id="aw-chevron-policy">▶</span>
+      <span class="section-title">Policy</span>
+    </div>
+    <div class="section-body section-body--policy" id="aw-section-body-policy" style="display:none"></div>
+
     <div class="status">
       <div class="dot" id="aw-status-dot"></div>
       <span id="aw-status-txt">Connecting…</span>
     </div>
+
   </div>
   <button id="aw-toggle" class="toggle-tab" style="right: var(--sidebar-w)">DevTools</button>
 `
@@ -338,7 +481,8 @@ const CSS = `
     --allowed:    #10b981;
     --denied:     #ef4444;
     --audit:      #f59e0b;
-    --lockdown:   #8b5cf6;
+    --suspended:  #8b5cf6;
+    --lockdown:   #dc2626;
     --font:       ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   }
 
@@ -417,6 +561,38 @@ const CSS = `
     flex:        1;
   }
 
+  /* ── Sections ── */
+
+  .section-header {
+    display:       flex;
+    align-items:   center;
+    gap:           7px;
+    padding:       6px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink:   0;
+    cursor:        pointer;
+    user-select:   none;
+    background:    var(--bg-deep);
+  }
+
+  .section-header:hover { background: var(--bg-hover); }
+
+  .section-chevron {
+    color:       var(--dim);
+    font-size:   9px;
+    flex-shrink: 0;
+    width:       10px;
+  }
+
+  .section-title {
+    color:          var(--muted);
+    font-size:      10px;
+    font-weight:    600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    flex:           1;
+  }
+
   .badge {
     display:       none;
     background:    var(--denied);
@@ -428,6 +604,93 @@ const CSS = `
   }
 
   .badge--visible { display: inline-block; }
+
+  .section-body--decisions {
+    flex:       1;
+    overflow-y: auto;
+  }
+
+  .section-body--decisions::-webkit-scrollbar       { width: 4px; }
+  .section-body--decisions::-webkit-scrollbar-track { background: var(--bg); }
+  .section-body--decisions::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── Policy section body ── */
+
+  .section-body--policy {
+    flex-shrink: 0;
+    padding:     12px;
+    background:  var(--bg-deep);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .policy-label {
+    display:       block;
+    color:         var(--dim);
+    font-size:     10px;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .policy-select {
+    width:         100%;
+    background:    var(--bg);
+    border:        1px solid var(--border);
+    color:         var(--text);
+    border-radius: 4px;
+    padding:       5px 8px;
+    font-family:   var(--font);
+    font-size:     11px;
+    margin-bottom: 8px;
+    cursor:        pointer;
+  }
+
+  .policy-select:focus { outline: 1px solid var(--allowed); border-color: var(--allowed); }
+
+  .policy-actions {
+    display:     flex;
+    align-items: center;
+    gap:         10px;
+  }
+
+  .btn--apply {
+    background:    var(--allowed);
+    color:         #fff;
+    border:        none;
+    border-radius: 4px;
+    cursor:        pointer;
+    font-family:   var(--font);
+    font-size:     11px;
+    padding:       4px 14px;
+    line-height:   1.5;
+  }
+
+  .btn--apply:hover    { background: #059669; }
+  .btn--apply:disabled { opacity: 0.5; cursor: default; }
+  .btn--applying       { opacity: 0.7; cursor: default; }
+
+  .policy-status {
+    font-size:   11px;
+    flex:        1;
+    white-space: nowrap;
+    overflow:    hidden;
+    text-overflow: ellipsis;
+  }
+
+  .policy-status--ok  { color: var(--allowed); }
+  .policy-status--err { color: var(--denied); }
+
+  .policy-loading,
+  .policy-empty {
+    color:       var(--dim);
+    font-size:   11px;
+    line-height: 1.5;
+  }
+
+  .policy-empty code {
+    color:       var(--muted);
+    font-family: var(--font);
+  }
 
   /* ── Buttons ── */
 
@@ -445,17 +708,6 @@ const CSS = `
   .btn--ghost    { background: none; border: 1px solid var(--border); color: var(--muted); }
   .btn--ghost:hover { border-color: var(--muted); color: var(--text); }
   .btn--sm       { padding: 2px 7px; font-size: 10px; }
-
-  /* ── Decision list ── */
-
-  .list {
-    flex:       1;
-    overflow-y: auto;
-  }
-
-  .list::-webkit-scrollbar       { width: 4px; }
-  .list::-webkit-scrollbar-track { background: var(--bg); }
-  .list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
   /* ── Empty state ── */
 
@@ -524,8 +776,9 @@ const CSS = `
     flex-shrink:   0;
   }
 
-  .override--permissive { background: rgba(245,158,11,0.2); color: var(--audit);    border: 1px solid rgba(245,158,11,0.3); }
-  .override--lockdown   { background: rgba(139,92,246,0.2); color: var(--lockdown); border: 1px solid rgba(139,92,246,0.3); }
+  .override--permissive { background: rgba(245,158,11,0.2); color: var(--audit);      border: 1px solid rgba(245,158,11,0.3); }
+  .override--suspended  { background: rgba(139,92,246,0.2); color: var(--suspended);  border: 1px solid rgba(139,92,246,0.3); }
+  .override--lockdown   { background: rgba(220,38,38,0.2);  color: var(--lockdown);   border: 1px solid rgba(220,38,38,0.3);  }
 
   .action-name {
     color:       #f1f5f9;

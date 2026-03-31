@@ -19,9 +19,10 @@ export interface PersistedDecision {
   /**
    * Set when an Enforcer changed the outcome.
    *  'permissive' — audit mode allowed despite a policy deny.
-   *  'lockdown'   — lockdown mode denied despite a policy allow.
+   *  'suspended'  — suspended mode denied despite a policy allow (policy still evaluated).
+   *  'lockdown'   — lockdown mode denied without evaluating the policy at all.
    */
-  override?:   'permissive' | 'lockdown'
+  override?:   'permissive' | 'suspended' | 'lockdown'
 }
 
 // ─── Flag record written to .authwrite-flags.json ────────────────────────────

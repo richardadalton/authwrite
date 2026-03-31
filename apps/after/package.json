@@ -1,0 +1,19 @@
+{
+  "name": "@authwrite/after",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@authwrite/core":     "*",
+    "@authwrite/express":  "*",
+    "@authwrite/devtools": "*",
+    "express":             "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "tsx":            "^4.19.3"
+  }
+}

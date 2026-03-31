@@ -1,6 +1,6 @@
 # Chapter 8: Policy Loaders
 
-A policy defined directly in TypeScript source is tightly coupled to your deployment cycle. Changing which rule fires on a given action, adjusting priorities, or toggling `defaultEffect` all require a code change, a build, and a deploy. For low-traffic internal tools that might be acceptable, but for anything that serves real users, the inability to update policy without a redeploy is a significant constraint. Loaders solve this by separating the policy structure — which can live in a file that operators can edit — from the match and condition logic, which must remain in code. This chapter covers the `PolicyLoader` interface, the YAML/JSON file loader, the registry pattern that bridges the two halves, and how to wire up hot reload.
+A policy defined directly in TypeScript source is tightly coupled to your deployment cycle. Changing which rule fires on a given action, adjusting priorities, or toggling `defaultEffect` all require a code change, a build, and a deploy. For low-traffic internal tools that might be acceptable, but for anything that serves real users, the inability to update policy without a redeploy is a significant constraint. Loaders solve this by separating the policy structure — which can live in a file that operators can edit — from the match and condition logic, which must remain in code. This chapter covers the `PolicyLoader` interface, the YAML/JSON file loader, the registry pattern that bridges the two halves, and how to wire up hot reload using `fromLoader`.
 
 ---
 
@@ -44,7 +44,7 @@ The `@authwrite/loader-yaml` package provides `createFileLoader`, which reads a 
               PolicyDefinition<S, R>
                          │
                          ▼
-              engine.reload(policy)
+              fromLoader cache updated
 ```
 
 ---
@@ -88,9 +88,8 @@ fieldRules:
 
 A few things to notice:
 
-- `priority` is optional. Rules without an explicit priority are evaluated in file order. A higher number means higher priority — `priority: 5` beats an unprioritised rule.
+- `priority` is optional. Rules without an explicit priority have priority 0. A higher number means higher priority — `priority: 5` beats an unprioritised rule.
 - `allow: ['*']` matches any action. This is the only wildcard the schema supports.
-- `deny` entries in the same rule as `allow` entries are evaluated at the rule level, but the typical pattern is to have dedicated deny rules with elevated priority.
 - `fieldRules` entries are keyed by `id` so the registry can attach match logic to them, just like action rules.
 
 ---
@@ -129,18 +128,19 @@ const loader = createFileLoader<Subject, Resource>({
 
 A few things to notice:
 
-- Every rule ID in the YAML file that needs custom logic must have a corresponding entry in the registry. Rules without a registry entry will still parse, but their `match` function will default to always-true, meaning the rule fires for every subject/resource pair.
+- Every rule ID in the YAML file that needs custom logic must have a corresponding entry in the registry. Rules without a registry entry will still parse, but their `match` function will default to always-true.
 - The `resource` parameter may be `undefined` — guard against it when your rules depend on resource properties.
 - The registry is defined once at startup. It is ordinary TypeScript and can import from anywhere in your codebase.
 
 ---
 
-## Startup pattern
+## Startup pattern with fromLoader
 
-Call `load()` at application startup to get the initial policy, then call `watch()` to register the hot-reload callback.
+Use `fromLoader` from `@authwrite/core` to convert a `PolicyLoader` into a `PolicyResolver`. `fromLoader` loads the policy eagerly, caches it, and wires the loader's `watch()` callback to update the cache automatically. The engine is then created synchronously.
 
 ```typescript
-import { createEngine } from '@authwrite/core'
+import { createAuthEngine, fromLoader } from '@authwrite/core'
+import { createFileLoader } from '@authwrite/loader-yaml'
 
 async function bootstrap() {
   const loader = createFileLoader<Subject, Resource>({
@@ -148,20 +148,40 @@ async function bootstrap() {
     rules,
   })
 
-  // Load the initial policy before the server accepts requests
-  const initialPolicy = await loader.load()
-  const engine = createEngine({ policy: initialPolicy })
+  // fromLoader loads the initial policy and wires watch() for hot reload
+  const policy = await fromLoader(loader)
 
-  // Register for hot reload
-  loader.watch((updatedPolicy) => {
-    engine.reload(updatedPolicy)
-  })
+  // createAuthEngine is now synchronous
+  const engine = createAuthEngine({ policy })
 
   return engine
 }
 ```
 
-The `watch()` callback invokes `engine.reload()`, which atomically swaps the policy and fires `onPolicyReload` on all registered observers. Requests in-flight when a reload occurs complete against the old policy; requests that begin after the swap use the new policy.
+When the file changes, the watcher callback fires and the cached policy updates. The next evaluation uses the new policy automatically.
+
+If you need to be notified when a reload occurs — for example, to fire `onPolicyReload` observers or to signal in a test — pass an optional callback to `fromLoader`:
+
+```typescript
+const policy = await fromLoader(loader, (newPolicy) => {
+  console.log(`Policy reloaded: ${newPolicy.id}@${newPolicy.version}`)
+  // engine.reload(newPolicy)  // call this to trigger onPolicyReload observers
+})
+```
+
+If you need explicit control — for example, to validate the policy before it goes live — you can manage `load()` and `watch()` manually and use `engine.reload()` directly:
+
+```typescript
+const initialPolicy = await loader.load()
+const engine = createAuthEngine({ policy: initialPolicy })
+
+loader.watch((updatedPolicy) => {
+  // Validate before applying
+  if (validate(updatedPolicy)) {
+    engine.reload(updatedPolicy)
+  }
+})
+```
 
 ---
 

@@ -103,7 +103,7 @@ Here is every field and what it means:
 | `evaluatedAt` | `Date` | When evaluation ran |
 | `durationMs` | `number` | Evaluation duration in milliseconds |
 | `defaulted` | `boolean \| undefined` | `true` when no rule matched and `defaultEffect` was applied |
-| `override` | `'permissive' \| 'lockdown' \| undefined` | Set when the Enforcer overrode the policy decision |
+| `override` | `'permissive' \| 'suspended' \| 'lockdown' \| undefined` | Set when the Enforcer overrode the policy decision |
 | `error` | `Error \| undefined` | Present when a rule threw during evaluation |
 
 The most important field for security operations is `reason`.

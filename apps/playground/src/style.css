@@ -140,9 +140,10 @@ h1 {
 
 .mode-btn:hover { color: var(--text); border-color: var(--muted-2); }
 
-.mode-btn.active.mode-enforce { color: var(--blue);  border-color: var(--blue);  background: var(--blue-bg);  }
-.mode-btn.active.mode-audit   { color: var(--amber); border-color: var(--amber); background: var(--amber-bg); }
-.mode-btn.active.mode-lockdown{ color: var(--red);   border-color: var(--red);   background: var(--red-bg);   }
+.mode-btn.active.mode-enforce   { color: var(--blue);   border-color: var(--blue);   background: var(--blue-bg);   }
+.mode-btn.active.mode-audit     { color: var(--amber);  border-color: var(--amber);  background: var(--amber-bg);  }
+.mode-btn.active.mode-suspended { color: var(--purple); border-color: var(--purple); background: var(--purple-bg); }
+.mode-btn.active.mode-lockdown  { color: var(--red);    border-color: var(--red);    background: var(--red-bg);    }
 
 /* ─── Mode banner ──────────────────────────────────────────────────────────── */
 
@@ -156,6 +157,12 @@ h1 {
   background:   var(--amber-bg);
   color:        var(--amber);
   border-color: var(--amber-border);
+}
+
+.mode-banner.suspended {
+  background:   var(--purple-bg);
+  color:        var(--purple);
+  border-color: var(--purple-border);
 }
 
 .mode-banner.lockdown {

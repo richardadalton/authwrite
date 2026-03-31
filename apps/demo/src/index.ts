@@ -1,5 +1,7 @@
+import { fileURLToPath } from 'node:url'
+import { join, dirname }  from 'node:path'
 import express, { type Request, type Response } from 'express'
-import { createAuthEngine, createEnforcer } from '@authwrite/core'
+import { createAuthEngine } from '@authwrite/core'
 import type { Decision } from '@authwrite/core'
 import { createAuthMiddleware } from '@authwrite/express'
 import { createDevTools } from '@authwrite/devtools'
@@ -7,21 +9,31 @@ import { documentPolicy } from './policy.js'
 import { DOCS, USERS, type Doc, type User } from './data.js'
 import { docListPage, docDetailPage } from './views.js'
 
+const __dirname    = dirname(fileURLToPath(import.meta.url))
+const POLICIES_DIR = join(__dirname, '..', 'policies')
 const APP_PORT      = 3001
 const DEVTOOLS_PORT = 4999
 
 // ─── Auth engine ──────────────────────────────────────────────────────────────
 
-const devtools = createDevTools({ port: DEVTOOLS_PORT })
-
-const engine   = createAuthEngine({
-  policy:    documentPolicy,
-  observers: [devtools.observer],
+const devtools = createDevTools({
+  port: DEVTOOLS_PORT,
+  policies: {
+    dir:     POLICIES_DIR,
+    onApply: async (filePath) => {
+      console.log(`\n  [policy switcher] Selected: ${filePath}`)
+      console.log('  (In a full integration, this would hot-reload the engine.)\n')
+    },
+  },
 })
 
-// Running in audit mode: the policy evaluates honestly, the enforcer lets
-// everything through. The sidebar shows the real decisions.
-const enforcer = createEnforcer(engine, { mode: 'audit' })
+// Running in audit mode: the policy evaluates honestly but everything is
+// allowed through. The sidebar shows the real decisions.
+const engine = createAuthEngine({
+  policy:    documentPolicy,
+  mode:      'audit',
+  observers: [devtools.observer],
+})
 
 // ─── Resolver helpers ─────────────────────────────────────────────────────────
 
@@ -38,7 +50,7 @@ function getDoc(req: Request): Doc | undefined {
 
 function authFor(action: string) {
   return createAuthMiddleware<User, Doc>({
-    engine:   enforcer,
+    engine,
     subject:  (req: Request) => getUser(req),
     resource: (req: Request) => getDoc(req),
     action,

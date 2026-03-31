@@ -103,7 +103,7 @@ interface Decision {
   evaluatedAt: Date
   durationMs: number
   defaulted?: boolean   // true when no rule matched
-  override?: 'permissive' | 'lockdown'
+  override?: 'permissive' | 'suspended' | 'lockdown'
   error?: Error
 }
 ```
@@ -112,7 +112,7 @@ A few things to notice:
 
 - `reason` is the `id` of the winning rule, or `'default'` when `defaultEffect` applied with no rule match. This makes denial messages actionable: you always know which rule (or the lack of one) caused the outcome.
 - `defaulted: true` is a signal worth logging. It often means a new action was introduced but no rule was written for it yet.
-- `override` is set when an `Enforcer` in `lockdown` or `permissive` mode overrode the policy outcome.
+- `override` is set when an `Enforcer` changed the outcome: `'permissive'` (audit allowed a denial), `'suspended'` (suspended denied an allow, policy still evaluated), or `'lockdown'` (lockdown denied without evaluating the policy).
 - The full `context` is embedded in the decision, so observers receive a self-contained event requiring no additional lookups.
 
 ---
@@ -191,11 +191,12 @@ An `Enforcer` wraps an `AuthEngine` and adds a runtime mode switch. It implement
 
 | Mode | Behaviour |
 | --- | --- |
-| `enforce` | Normal — policy decisions are returned as-is |
-| `audit` | Policy is evaluated but all decisions are forced to `allowed: true`; override is recorded |
-| `lockdown` | All decisions are forced to `allowed: false` regardless of policy; override is recorded |
+| `audit` | Policy evaluates; denials overridden to allow. `override: 'permissive'` recorded. |
+| `enforce` | Normal — policy decisions are returned as-is. |
+| `suspended` | Policy evaluates; observers fire; allows overridden to deny. `override: 'suspended'` recorded. |
+| `lockdown` | Engine bypassed entirely. Immediate deny, no observers. `override: 'lockdown'`, `reason: 'lockdown'`. |
 
-`audit` mode is useful during a policy rollout: you can ship the policy, observe what would have been denied in production, and tighten rules before switching to `enforce`.
+`audit` mode is useful during a policy rollout: you can ship the policy, observe what would have been denied in production, and tighten rules before switching to `enforce`. `suspended` and `lockdown` are incident-response postures, escalating in severity.
 
 ---
 

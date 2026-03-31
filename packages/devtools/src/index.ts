@@ -1,14 +1,16 @@
 export { DevToolsObserver }    from './observer.js'
 export { createDevServer }     from './server.js'
 export type { PersistedDecision, DecisionFlag } from './observer.js'
-export type { DevServerOptions, DevServer }     from './server.js'
+export type { DevServerOptions, DevServer, PolicySwitcherOptions } from './server.js'
 
 import { DevToolsObserver }  from './observer.js'
 import { createDevServer }   from './server.js'
+import type { PolicySwitcherOptions } from './server.js'
 
 export interface CreateDevToolsOptions {
   port?:      number
   flagsFile?: string
+  policies?:  PolicySwitcherOptions
 }
 
 /**

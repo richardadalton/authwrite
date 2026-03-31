@@ -12,7 +12,7 @@ export function createFileLoader<S extends Subject = Subject, R extends Resource
 ): PolicyLoader<S, R>
 ```
 
-Factory function that returns a `PolicyLoader` backed by a file on disk. Supports `.yaml`, `.yml`, and `.json` file extensions. The returned loader satisfies the `PolicyLoader` interface and can be passed directly to `createAuthEngine`.
+Factory function that returns a `PolicyLoader` backed by a file on disk. Supports `.yaml`, `.yml`, and `.json` file extensions. Pass the returned loader to `fromLoader()` from `@authwrite/core` to convert it into a `PolicyResolver` suitable for `createAuthEngine`.
 
 ### `FileLoaderConfig` options
 
@@ -142,15 +142,25 @@ Subscribes to file changes. When the file at `config.path` changes on disk, the 
 |---|---|---|
 | `cb` | `(policy: PolicyDefinition<S, R>) => void` | Callback invoked with the freshly loaded policy after each detected change. |
 
-File watching is implemented with Node's `fs.watch` with a 50 ms debounce to coalesce rapid successive write events. Pass this loader to `createAuthEngine` and call `engine.reload()` inside the callback to apply updates at runtime without restarting the process.
+File watching is implemented with Node's `fs.watch` with a 50 ms debounce to coalesce rapid successive write events. The recommended pattern is to pass the loader to `fromLoader()`, which wires `watch()` automatically:
 
 ```typescript
+import { createAuthEngine, fromLoader } from '@authwrite/core'
+
 const loader = createFileLoader({ path: './policy.yaml', rules: myRegistry })
 
-const engine = createAuthEngine({ loader })
+// fromLoader wires watch() automatically — no manual reload needed
+const engine = createAuthEngine({ policy: await fromLoader(loader) })
+```
+
+If you need explicit control — for example, to validate the new policy before applying it — wire `watch()` manually:
+
+```typescript
+const initialPolicy = await loader.load()
+const engine = createAuthEngine({ policy: initialPolicy })
 
 loader.watch(updated => {
-  engine.reload(updated)
+  if (validate(updated)) engine.reload(updated)
 })
 ```
 

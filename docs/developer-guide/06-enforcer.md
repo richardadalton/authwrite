@@ -1,157 +1,165 @@
-# Chapter 6: The Enforcer
+# Chapter 6: Enforcement Modes
 
-Deploying a new authorization policy is a high-stakes operation. A single misconfigured rule can lock users out of the product, and discovering that in production — after the fact — is far worse than being cautious during rollout. The Enforcer exists to solve this problem. It wraps an `AuthEngine` and intercepts what callers see, without touching what observers see. That separation is the whole point: you can shadow-run a new policy against real traffic, collect honest audit data, and only promote it to active enforcement once you trust it. This chapter explains how the Enforcer's three modes work, why the honest/modified split matters for audit logging, and how to run a safe gradual rollout.
+Deploying a new authorization policy is a high-stakes operation. A single misconfigured rule can lock users out of the product, and discovering that in production — after the fact — is far worse than being cautious during rollout. The engine's enforcement mode exists to solve this problem. By setting a mode on the engine, you can shadow-run a new policy against real traffic, collect honest audit data, and only promote it to active enforcement once you trust it. This chapter explains how the four modes work, why the honest/modified split matters for audit logging, and how to run a safe gradual rollout.
 
 ---
 
-## The three modes
+## The four modes
 
-The `EnforcerMode` type has three values, each representing a distinct operating posture.
+The `EnforcerMode` type has four values representing an escalating posture from observation through to full lockdown.
 
 ```
-enforce   →  Normal operation. Policy decisions pass through unchanged.
-audit     →  Policy runs honestly. Denials are overridden to allow.
-lockdown  →  All access denied. Policy result is ignored.
+audit      →  Policy runs honestly. Denials are overridden to allow.
+enforce    →  Normal operation. Policy decisions pass through unchanged.
+suspended  →  Policy runs. Observers fire. All access denied.
+lockdown   →  Engine bypassed entirely. Immediate deny.
 ```
 
-**`enforce`** is the default operating mode. The engine evaluates the policy, the Enforcer passes the result straight to the caller. There is no override. This is how the library behaves once you are confident in your policy.
+**`audit`** is a shadow-run mode. The engine evaluates the policy exactly as it would in production. If the result is a denial, the engine overrides it to an allow before returning to the caller. The caller sees `decision.allowed === true`. The `decision.override` field is set to `'permissive'` so that any code inspecting the full decision object can see that an override occurred. Observers always receive the honest decision — the one the policy actually produced — before the override is applied.
 
-**`audit`** is a shadow-run mode. The engine evaluates the policy exactly as it would in production. If the result is a denial, the Enforcer overrides it to an allow before returning to the caller. The caller sees `decision.allowed === true`. The `decision.override` field is set to `'permissive'` so that any code inspecting the full decision object can see that an override occurred. Observers attached to the underlying engine always receive the honest decision — the one the policy actually produced — before the Enforcer has modified anything.
+**`enforce`** is the default operating mode. The engine evaluates the policy and passes the result straight to the caller. There is no override. This is how the library behaves once you are confident in your policy.
 
-**`lockdown`** is an emergency posture. Every access request is denied regardless of what the policy says. If the policy would have allowed the request, the Enforcer overrides the result to a denial and sets `decision.override` to `'lockdown'`. This is intended for incident response: a single `setMode('lockdown')` call shuts access down across every route that uses the same Enforcer, without touching configuration files or requiring a redeploy.
+**`suspended`** is a controlled denial posture. The engine still evaluates the policy and observers still fire — you keep your full audit trail. But if the policy would have allowed the request, the result is overridden to a denial and `decision.override` is set to `'suspended'`. This is useful for incident response where you want to stop all access while preserving the record of what rules were matching. A single `engine.setMode('suspended')` call freezes access across every route that uses the same engine.
+
+**`lockdown`** is the most severe posture. The engine skips policy evaluation entirely and returns a denial immediately. `decision.reason` is `'lockdown'` and `decision.override` is `'lockdown'`. Observers still fire — with the lockdown decision — so your audit trail records that requests arrived and were rejected. Use this when the threat is serious enough that you want to cut all processing and minimise attack surface.
 
 ---
 
 ## What callers see versus what observers see
 
-This distinction is the most important thing to understand about the Enforcer.
+This distinction is the most important thing to understand about enforcement modes.
 
 ```
-                         ┌─────────────────────────────────────────┐
-                         │             AuthEngine                   │
-                         │                                          │
-  evaluate(ctx)  ──────► │  policy eval  →  honest decision        │──► observers
-                         │                       │                  │    (always honest)
-                         └───────────────────────┼─────────────────┘
-                                                 │
-                                          ┌──────▼──────┐
-                                          │   Enforcer   │
-                                          │              │
-                                          │  applyMode() │
-                                          │  ┌─────────┐ │
-                                          │  │ audit   │ │  deny  → allow
-                                          │  │lockdown │ │  allow → deny
-                                          │  │enforce  │ │  pass through
-                                          │  └─────────┘ │
-                                          └──────┬──────┘
+                         ┌─────────────────────────────────────────────┐
+                         │                 AuthEngine                   │
+                         │                                              │
+  evaluate(ctx)  ──────► │  policy eval  →  honest decision            │──► observers
+                         │                       │                      │    (always honest)
+                         │               ┌───────▼───────┐             │
+                         │               │  applyMode()  │             │
+                         │               │               │             │
+                         │               │  audit:       │deny → allow │
+                         │               │  enforce:     │pass through │
+                         │               │  suspended:   │allow → deny │
+                         │               │  lockdown:    │short-circuit│
+                         │               └───────┬───────┘             │
+                         └───────────────────────┼─────────────────────┘
                                                  │
                                           modified decision
                                                  │
                                                caller
 ```
 
-The engine fires its observers with the raw, unmodified result. The Enforcer only modifies what it hands back to the caller. This means that in `audit` mode, your audit log observer will record every decision the policy would have made in production — including the denials — even though the application is not blocking anyone. You are collecting real enforcement data without real enforcement consequences.
+Observers always receive the raw, unmodified result. The mode only modifies what is handed back to the caller. In `audit` mode, your audit log observer records every decision the policy would have made in production — including the denials — even though the application is not blocking anyone. You are collecting real enforcement data without real enforcement consequences.
 
-If you attached observers to the Enforcer rather than the engine, you would only see the modified decisions and your audit data would be useless. Attach observers to the engine, not the Enforcer.
+In `suspended` mode, the same applies: observers see the honest policy decision (which may be an allow), even though the caller receives a denial with `override: 'suspended'`. Your audit trail remains intact.
+
+In `lockdown` mode, the engine skips policy evaluation and fires observers with the lockdown decision. The lockdown decision has `reason: 'lockdown'` and `allowed: false`, so your audit log records that requests arrived and were rejected, without any policy evaluation overhead.
 
 ---
 
-## Creating an Enforcer
+## Setting the mode
 
-`createEnforcer` takes an existing `AuthEngine` and a configuration object with the initial mode.
+Pass `mode` in the engine config. The default is `'enforce'`.
 
 ```typescript
-import { createEngine } from '@authwrite/core'
-import { createEnforcer } from '@authwrite/core'
-
-const engine = createEngine({ policy })
+import { createAuthEngine } from '@authwrite/core'
 
 // Start in audit mode during rollout
-const enforcer = createEnforcer(engine, { mode: 'audit' })
-
-// Pass the enforcer wherever an AuthEvaluator is accepted
-const decision = await enforcer.evaluate(ctx)
+const engine = createAuthEngine({
+  policy,
+  mode:      'audit',
+  observers: [auditLogObserver],
+})
 ```
 
-A few things to notice:
-
-- `createEnforcer` accepts an `AuthEngine`, not another Enforcer. There is no stacking.
-- The returned `Enforcer` implements `AuthEvaluator`, which means it is drop-in compatible with every place that accepts an engine — including the Express middleware from Chapter 10.
-- The `mode` property is readable at any time: `enforcer.mode` returns the current mode.
-
----
-
-## Switching modes at runtime
-
-`setMode()` changes the Enforcer's operating posture without creating a new instance or touching the engine underneath.
+Switch modes at runtime without recreating the engine:
 
 ```typescript
-// During rollout: switch to enforce once you're confident
-enforcer.setMode('enforce')
+// Promote to enforce once you're confident
+engine.setMode('enforce')
 
-// During an incident: immediate lockdown
-enforcer.setMode('lockdown')
+// Suspend all access during an incident
+engine.setMode('suspended')
+
+// Most severe — skip policy evaluation entirely
+engine.setMode('lockdown')
 
 // Restore normal operation
-enforcer.setMode('enforce')
+engine.setMode('enforce')
+
+// Inspect the current mode
+console.log(engine.getMode())  // 'enforce'
 ```
 
-Because `setMode()` mutates the Enforcer in place, every part of your application that holds a reference to the same Enforcer instance is affected immediately. This is intentional. A lockdown triggered from an operations endpoint propagates to every route handler that uses the same Enforcer without requiring any coordination.
+Because `setMode()` mutates the engine in place, every part of your application that holds a reference to the same engine instance is affected immediately. A mode change triggered from an operations endpoint propagates to every route handler that uses the same engine without any coordination.
 
 ---
 
 ## Gradual rollout pattern
 
-The Enforcer is designed to support a three-phase rollout for a new or significantly changed policy.
+The enforcement mode is designed to support a three-phase rollout for a new or significantly changed policy.
 
 **Phase 1 — Audit**
 
 Deploy with `mode: 'audit'`. All users have uninterrupted access. Observer events flow to your audit log showing exactly which requests the policy would have denied. Run this for as long as you need — days if the policy is complex — until you are satisfied that the denial pattern matches your intent.
 
 ```typescript
-const enforcer = createEnforcer(engine, { mode: 'audit' })
-
-// Attach an observer to the engine to capture honest decisions
-engine.addObserver({
-  onDecision({ decision }) {
-    if (!decision.allowed) {
-      auditLog.write({
-        rule: decision.reason,
-        override: decision.override,  // 'permissive' in audit mode
-        timestamp: Date.now(),
-      })
-    }
-  },
+const engine = createAuthEngine({
+  policy,
+  mode: 'audit',
+  observers: [{
+    onDecision({ decision }) {
+      if (!decision.allowed) {
+        // override: 'permissive' confirms this is an audit-mode shadow denial
+        auditLog.write({
+          rule:      decision.reason,
+          override:  decision.override,
+          timestamp: Date.now(),
+        })
+      }
+    },
+  }],
 })
 ```
 
 **Phase 2 — Enforce**
 
-Once the audit data looks correct, switch to `enforce`. The policy now has real consequences. Keep your observer running. If an unexpected denial rate appears, you can switch back to `audit` or to `lockdown` depending on the severity.
+Once the audit data looks correct, switch to `enforce`. The policy now has real consequences. Keep your observer running. If an unexpected denial rate appears, you can drop back to `audit` or escalate to `suspended` or `lockdown` depending on severity.
 
 ```typescript
-enforcer.setMode('enforce')
+engine.setMode('enforce')
 ```
 
-**Phase 3 — Lockdown (emergency only)**
+**Phase 3 — Suspended (controlled incident response)**
 
-If you discover a serious misconfiguration — a rule that grants access it should not — switch to `lockdown` immediately to stop the bleeding. Then fix the policy, redeploy, and switch back to `enforce`.
+If you discover a serious misconfiguration — a rule that grants access it should not — switch to `suspended` to stop all access while keeping observers running. The audit trail tells you exactly what was being allowed while you investigate. Fix the policy, redeploy, and switch back to `enforce`.
 
 ```typescript
-enforcer.setMode('lockdown')
+engine.setMode('suspended')
+```
+
+**Phase 4 — Lockdown (most severe)**
+
+If the threat is serious enough that you need to cut all processing immediately — skip policy evaluation, minimise attack surface — switch to `lockdown`. Requests are rejected before the policy is touched. Observers still fire so your audit trail records the lockdown rejections.
+
+```typescript
+engine.setMode('lockdown')
 ```
 
 ---
 
-## Field access in audit and lockdown modes
+## Field access across modes
 
-The Enforcer's mode also affects `evaluateRead`, which controls which fields are returned when reading a resource.
+The engine's mode also affects `evaluateRead`, which controls which fields are returned when reading a resource.
 
-In **`audit` mode**, if the policy would have denied field access, the Enforcer overrides the denial to an allow and returns the full set of fields. This keeps the application functional: if your code expects certain fields on the response, it will continue to get them. The observer still records the honest decision.
-
-In **`lockdown` mode**, `evaluateRead` returns an empty field set. There is nothing to expose if all access is denied.
+In **`audit` mode**, if the policy would have denied field access, the engine overrides the denial to an allow and returns the full set of fields. This keeps the application functional: if your code expects certain fields on the response, it continues to get them. The observer still records the honest decision.
 
 In **`enforce` mode**, `evaluateRead` returns whatever the policy dictates — exposed fields are returned, redacted fields are withheld.
+
+In **`suspended` mode**, `evaluateRead` returns an empty field set. The policy still evaluates and observers still fire, but the caller receives no fields.
+
+In **`lockdown` mode**, `evaluateRead` also returns an empty field set, and policy evaluation is skipped.
 
 ---
 

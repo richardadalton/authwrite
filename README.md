@@ -188,7 +188,10 @@ const enforcer = createEnforcer(engine, { mode: 'audit' })
 // Phase 2 — enforce
 const enforcer = createEnforcer(engine, { mode: 'enforce' })
 
-// Emergency — block everything regardless of policy
+// Incident response — block everything, keep audit trail
+enforcer.setMode('suspended')
+
+// Most severe — bypass engine entirely, no observers
 enforcer.setMode('lockdown')
 ```
 

@@ -21,6 +21,8 @@ export default defineConfig({
       "@authwrite/loader-db":    fileURLToPath(new URL("packages/loader-db/src/index.ts",    import.meta.url)),
       "@authwrite/loader-yaml":  fileURLToPath(new URL("packages/loader-yaml/src/index.ts",  import.meta.url)),
       "@authwrite/testing":      fileURLToPath(new URL("packages/testing/src/index.ts",      import.meta.url)),
+      "@authwrite/devtools":     fileURLToPath(new URL("packages/devtools/src/index.ts",     import.meta.url)),
+      "@authwrite/hateoas":      fileURLToPath(new URL("packages/hateoas/src/index.ts",      import.meta.url)),
     },
   },
 });
