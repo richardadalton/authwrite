@@ -7,10 +7,10 @@ This guide covers everything you need to build with Authwrite, from understandin
 | Chapter | Title | What you learn |
 |---|---|---|
 | 1 | [How the Engine Works](01-engine-and-decisions.md) | The core decision model: how policies are evaluated, what a `Decision` contains, and why the engine is deny-by-default. |
-| 2 | [Defining a Policy](02-policies-and-rules.md) | How to construct a `PolicyDefinition` in TypeScript, write rules with `allow` and `deny` entries, and set rule priorities. |
-| 3 | [Subjects and Resources](03-actions-and-resources.md) | How to type your `Subject` and `Resource` domain objects and pass them into the engine via `AuthContext`. |
-| 4 | [Actions](04-priority-and-conflicts.md) | The three built-in action categories (`read`, `write`, `delete`), how to use wildcard matching, and how to define custom actions. |
-| 5 | [Field Filtering](05-field-filtering.md) | How `evaluateRead` works, how to define `fieldRules` that expose or redact specific fields, and how field decisions relate to action decisions. |
+| 2 | [Policies and Rules](02-policies-and-rules.md) | The structure of a `PolicyDefinition`, the anatomy of a `PolicyRule`, and the design choices that make rules composable and testable. |
+| 3 | [Actions, Subjects, and Resources](03-actions-and-resources.md) | The `Subject`, `Resource`, and `Action` interfaces, the `AuthContext` that binds them, and the three action categories that determine which fields are present on the context. |
+| 4 | [Priority and Conflict Resolution](04-priority-and-conflicts.md) | How Authwrite resolves conflicts when two rules both match and disagree on the outcome, what `priority` means in practice, and how to model common override scenarios correctly. |
+| 5 | [Field-Level Filtering](05-field-filtering.md) | How `evaluateRead` works, how to define `fieldRules` that expose or redact specific fields, and how field decisions relate to action decisions. |
 | 6 | [Enforcement Modes](06-enforcer.md) | How to shadow-run a policy in `audit` mode before enforcing it, what `lockdown` mode does, and why engine observers always see the honest decision. |
 | 7 | [Observers](07-observers.md) | The `AuthObserver` interface, how to write an audit log observer, what `onError` and `onPolicyReload` are for, and why side effects belong in observers rather than rules. |
 | 8 | [Policy Loaders](08-loaders.md) | How to load a policy from a YAML or JSON file, the `RuleRegistry` pattern that connects file-defined rules to TypeScript match functions, and how hot reload works via `fromLoader`. |
