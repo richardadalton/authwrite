@@ -15,7 +15,8 @@ This guide covers everything you need to build with Authwrite, from understandin
 | 7 | Observers | The `AuthObserver` interface, how to write an audit log observer, what `onError` and `onPolicyReload` are for, and why side effects belong in observers rather than rules. |
 | 8 | Policy Loaders | How to load a policy from a YAML or JSON file, the `RuleRegistry` pattern that connects file-defined rules to TypeScript match functions, and how hot reload works. |
 | 9 | Testing | How to test your policy directly against the engine, use `decisionRecorder` to capture decisions, and use `coverageReport` to find rules that never fired. |
-| 10 | Framework Adapters | How the Express adapter translates `AuthEvaluator` into middleware, how subject and resource resolvers work, and how to pass the Enforcer in place of the engine. |
+| 10 | Framework Adapters | How the Express, Fastify, Next.js, and Hono adapters translate `AuthEvaluator` into framework-native middleware, how subject and resource resolvers work, and how to pass the Enforcer in place of the engine. |
+| 11 | HATEOAS | How to build permission-aware hypermedia links using `buildLinks`, `embedLinks`, and `linksFromDecisions`, and how Enforcer modes affect link visibility. |
 
 ---
 

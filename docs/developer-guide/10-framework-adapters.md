@@ -266,12 +266,102 @@ async function startServer() {
 
 ---
 
-## Forthcoming adapters
+## Fastify adapter
 
-Adapters for Fastify, Next.js, and Hono are in development. They follow the same pattern as the Express adapter: an `AuthEvaluator`-accepting config function that returns the framework's native middleware or plugin shape. The policy, engine, and Enforcer are identical across all adapters.
+The Fastify adapter is in `@authwrite/fastify`. It returns a `preHandlerHookHandler` — a Fastify lifecycle hook that runs before your route handler and halts the request with a 403 if the policy denies access.
+
+```typescript
+import Fastify from 'fastify'
+import { createAuthEngine } from '@authwrite/core'
+import { createAuthHook } from '@authwrite/fastify'
+
+const app = Fastify()
+const engine = createAuthEngine({ policy: documentPolicy })
+
+const authHook = createAuthHook<Subject, Resource>({
+  engine,
+  subject:  (req) => req.user as Subject,
+  resource: async (req) => db.documents.findById(req.params.id),
+  action:   (req) => httpMethodToAction(req.method),
+})
+
+app.get('/documents/:id', { preHandler: authHook }, async (req, reply) => {
+  const doc = await db.documents.findById(req.params.id)
+  reply.send(doc)
+})
+```
+
+After evaluation, `req.authDecision` is set and available to the route handler. The hook calls `reply.status(403).send({ error: 'forbidden', reason })` on denial, or invokes `onDeny` if provided.
+
+For a complete configuration reference see [fastify-api.md](../reference/fastify-api.md).
 
 ---
 
-This completes the developer guide. The concepts covered across these ten chapters — the engine and decision model, deny-by-default evaluation, field filtering, the Enforcer's three modes, observers, file-based loaders, policy testing, and framework integration — are the full mental model for working with Authwrite. The Reference section documents every public API in detail.
+## Next.js adapter
+
+The Next.js adapter is in `@authwrite/nextjs`. It wraps an App Router route handler function, enforcing authorization before the handler executes.
+
+```typescript
+import { createAuthEngine } from '@authwrite/core'
+import { withAuth } from '@authwrite/nextjs'
+
+const engine = createAuthEngine({ policy: documentPolicy })
+
+export const GET = withAuth<Subject, Resource>(
+  {
+    engine,
+    subject:  async (req) => getSessionUser(req),
+    resource: async (req, ctx) => {
+      const { id } = await ctx.params
+      return db.documents.findById(id)
+    },
+    action: 'read',
+  },
+  async (req, ctx) => {
+    const { id } = await ctx.params
+    const doc = await db.documents.findById(id)
+    return Response.json(doc)
+  },
+)
+```
+
+The adapter uses only the standard Web API `Request` and `Response` types and has no hard dependency on the `next` package — it works with any version of Next.js that uses App Router route handlers. On denial it returns `Response.json({ error: 'forbidden', reason }, { status: 403 })` unless `onDeny` is provided.
+
+For a complete configuration reference see [nextjs-api.md](../reference/nextjs-api.md).
+
+---
+
+## Hono adapter
+
+The Hono adapter is in `@authwrite/hono`. It returns a standard `MiddlewareHandler` compatible with Hono's `app.use()` or inline route middleware.
+
+```typescript
+import { Hono } from 'hono'
+import { createAuthEngine } from '@authwrite/core'
+import { createAuthMiddleware, AUTH_DECISION_KEY } from '@authwrite/hono'
+
+const app   = new Hono()
+const engine = createAuthEngine({ policy: documentPolicy })
+
+const authMiddleware = createAuthMiddleware<Subject, Resource, Env>({
+  engine,
+  subject:  (c) => c.get('user') as Subject,
+  resource: async (c) => db.documents.findById(c.req.param('id')),
+  action:   (c) => httpMethodToAction(c.req.method),
+})
+
+app.get('/documents/:id', authMiddleware, async (c) => {
+  const doc = await db.documents.findById(c.req.param('id'))
+  return c.json(doc)
+})
+```
+
+After evaluation, the decision is stored with `c.set(AUTH_DECISION_KEY, decision)` and can be retrieved in the route handler via `c.get(AUTH_DECISION_KEY)`. The adapter is edge-runtime compatible and has no Node.js-specific dependencies.
+
+For a complete configuration reference see [hono-api.md](../reference/hono-api.md).
+
+---
+
+This completes the framework adapter chapter. The next chapter covers the HATEOAS package, which uses the same `AuthEvaluator` interface to build permission-aware hypermedia links.
 
 © 2026 Devjoy Ltd. MIT License.

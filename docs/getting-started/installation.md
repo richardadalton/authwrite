@@ -9,6 +9,10 @@ Authwrite ships as a family of focused packages. The core package has zero runti
 | `@authwrite/core` | Zero-dependency engine, evaluator, and all types |
 | `@authwrite/testing` | `decisionRecorder` and `coverageReport` for policy testing |
 | `@authwrite/express` | Express middleware adapter |
+| `@authwrite/fastify` | Fastify pre-handler hook adapter |
+| `@authwrite/nextjs` | Next.js App Router route handler wrapper |
+| `@authwrite/hono` | Hono middleware adapter (edge-runtime compatible) |
+| `@authwrite/hateoas` | Permission-aware hypermedia link building (HAL `_links`) |
 | `@authwrite/loader-yaml` | YAML/JSON file-based policy loader |
 | `@authwrite/observer-otel` | OpenTelemetry spans and metrics observer |
 
@@ -32,8 +36,14 @@ Add whichever extras your project needs.
 # Policy testing utilities
 npm install --save-dev @authwrite/testing
 
-# Express middleware
+# Framework adapters
 npm install @authwrite/express
+npm install @authwrite/fastify
+npm install @authwrite/nextjs
+npm install @authwrite/hono
+
+# HATEOAS hypermedia links
+npm install @authwrite/hateoas
 
 # Load policies from YAML or JSON files
 npm install @authwrite/loader-yaml
@@ -51,11 +61,15 @@ Some packages require peers that your project must supply.
 | Package | Peer dependency | Version |
 | --- | --- | --- |
 | `@authwrite/express` | `express` | `^4.0 \|\| ^5.0` |
+| `@authwrite/fastify` | `fastify` | `^4.0 \|\| ^5.0` |
+| `@authwrite/nextjs` | none | — |
+| `@authwrite/hono` | `hono` | `^4.0` |
+| `@authwrite/hateoas` | none | — |
 | `@authwrite/observer-otel` | `@opentelemetry/api` | `^1.0` |
 | `@authwrite/loader-yaml` | `js-yaml` | `^4.0` |
 | `@authwrite/testing` | `vitest` or `jest` | any |
 
-`@authwrite/core` itself has no peer dependencies.
+`@authwrite/core`, `@authwrite/nextjs`, and `@authwrite/hateoas` have no peer dependencies.
 
 ---
 
