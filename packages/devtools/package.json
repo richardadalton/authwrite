@@ -1,0 +1,36 @@
+{
+  "name": "@authwrite/devtools",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Browser devtools sidebar for Authwrite — live decision feed and policy flagging in development.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/richardadalton/authwrite.git",
+    "directory": "packages/devtools"
+  },
+  "keywords": ["authorization", "authz", "devtools", "debugging", "hateoas"],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "client", "README.md", "LICENSE"],
+  "scripts": {
+    "build": "node build.mjs",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo"
+  },
+  "dependencies": {
+    "@authwrite/core": "*"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
